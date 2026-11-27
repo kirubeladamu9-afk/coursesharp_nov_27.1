@@ -35,6 +35,7 @@ import { type FC, useEffect, useMemo, useState } from 'react'
 import { Footer } from '@/components/footer'
 import { Header } from '@/components/header'
 import CourseCardItem from './course-card-item'
+import { CatalogSkeletonGrid } from './catalog-skeleton'
 import { type Course } from '@/interfaces/course'
 
 interface CourseMarketplacePageProps {
@@ -212,7 +213,7 @@ const CourseMarketplacePage: FC<CourseMarketplacePageProps> = ({ courses, darkMo
               {activeFilters.map((filter) => <Chip key={`${filter.key}-${filter.value}`} size="small" label={filter.label} onDelete={() => { filter.remove(); setCurrentPage(1) }} color="primary" variant="outlined" />)}
               <Button size="small" onClick={clearFilters}>Clear all</Button>
             </Stack>}
-            {isLoading ? <Box aria-busy="true" sx={{ py: 8, textAlign: 'center' }}><Typography color="text.secondary">Loading courses…</Typography></Box> : visibleCourses.length ? <>
+            {isLoading ? <CatalogSkeletonGrid label="Loading courses" /> : visibleCourses.length ? <>
               <Box sx={viewMode === 'grid' ? { display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))' }, gap: { xs: 1, md: 2 } } : { display: 'grid', gridTemplateColumns: '1fr', gap: 1 }}>
                 {pageCourses.map((course) => <CourseCardItem key={course.id} item={course} viewMode={viewMode} courseTypes={getCourseTypes(course)} isFavorite={favorites.includes(String(course.id))} onToggleFavorite={toggleFavorite} />)}
               </Box>

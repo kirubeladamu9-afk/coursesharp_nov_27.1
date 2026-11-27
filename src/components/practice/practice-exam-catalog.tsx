@@ -5,7 +5,7 @@ import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import Container from '@mui/material/Container'
 import Chip from '@mui/material/Chip'
-import CircularProgress from '@mui/material/CircularProgress'
+import Skeleton from '@mui/material/Skeleton'
 import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
 import MenuItem from '@mui/material/MenuItem'
@@ -85,7 +85,24 @@ const PracticeExamCatalog: React.FC<PracticeExamCatalogProps> = ({ darkMode, onT
     </Box>
     <Box component="main" sx={{ maxWidth: 1200, mx: 'auto', px: { xs: 2, md: 4 }, py: { xs: 5, md: 8 } }}>
       <Typography variant="h5" sx={{ mb: 2.5 }}>Published practice exams</Typography>
-      {isLoading ? <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress aria-label="Loading practice exams" /></Box> : error ? <Alert severity="error">{error}</Alert> : exams.length === 0 ? <Alert severity="info">There are no published practice exams available yet.</Alert> : <>
+      {isLoading ? <Box role="status" aria-busy="true" aria-label="Loading practice exams">
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} sx={{ mb: 3 }}>
+          <Skeleton variant="rectangular" sx={{ flex: 1, height: 40, borderRadius: 1 }} />
+          <Skeleton variant="rectangular" sx={{ width: { md: 180 }, height: 40, borderRadius: 1 }} />
+          <Skeleton variant="rectangular" sx={{ width: { md: 160 }, height: 40, borderRadius: 1 }} />
+        </Stack>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' }, gap: 2.5 }}>
+          {Array.from({ length: examsPerPage }, (_, index) => <Card key={index} elevation={0} sx={{ border: 1, borderColor: 'divider' }}>
+            <Skeleton variant="rectangular" sx={{ height: 132 }} />
+            <CardContent>
+              <Stack direction="row" spacing={1} sx={{ mb: 1.5 }}><Skeleton variant="rectangular" sx={{ width: 96, height: 24, borderRadius: 3 }} /><Skeleton variant="rectangular" sx={{ width: 64, height: 24, borderRadius: 3 }} /></Stack>
+              <Skeleton variant="text" sx={{ fontSize: '1.25rem', mb: 1 }} />
+              <Skeleton variant="text" sx={{ mb: 2.5 }} />
+              <Stack direction="row" justifyContent="space-between" alignItems="center"><Skeleton variant="text" sx={{ width: 96 }} /><Skeleton variant="rectangular" sx={{ width: 140, height: 36, borderRadius: 1 }} /></Stack>
+            </CardContent>
+          </Card>)}
+        </Box>
+      </Box> : error ? <Alert severity="error">{error}</Alert> : exams.length === 0 ? <Alert severity="info">There are no published practice exams available yet.</Alert> : <>
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} sx={{ mb: 3 }}>
           <TextField size="small" fullWidth label="Search exams" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1) }} />
           <FormControl size="small" sx={{ minWidth: { md: 180 } }}><InputLabel>Subject</InputLabel><Select label="Subject" value={subjectFilter} onChange={(event) => { setSubjectFilter(event.target.value); setPage(1) }}><MenuItem value="all">All subjects</MenuItem>{subjects.map((subject) => <MenuItem key={subject} value={subject}>{subject}</MenuItem>)}</Select></FormControl>

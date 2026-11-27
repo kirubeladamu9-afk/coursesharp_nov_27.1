@@ -37,6 +37,7 @@ import { type FC, useEffect, useMemo, useState } from 'react'
 import { Footer } from '@/components/footer'
 import { Header } from '@/components/header'
 import EnrollmentModal from '@/components/course/enrollment-modal'
+import { CatalogSkeletonGrid } from '@/components/course/catalog-skeleton'
 import { type Course } from '@/interfaces/course'
 import { getPublicClasses, type PublicClass } from '@/services/api'
 import { AvailabilityBadge, formatSchedule, programs, type ProgramDefinition } from './training-programs'
@@ -296,7 +297,7 @@ const TrainingProgramsPage: FC<TrainingProgramsPageProps> = ({ courses, darkMode
               {activeFilters.map((filter) => <Chip key={`${filter.key}-${filter.value}`} size="small" label={filter.label} onDelete={() => { filter.remove(); setCurrentPage(1) }} color="primary" variant="outlined" />)}
               <Button size="small" onClick={clearFilters}>Clear all</Button>
             </Stack>}
-            {classesLoading ? <Box aria-busy="true" sx={{ py: 8, textAlign: 'center' }}><Typography color="text.secondary">Loading programs…</Typography></Box> : visibleListings.length ? <>
+            {classesLoading ? <CatalogSkeletonGrid label="Loading programs" /> : visibleListings.length ? <>
               <Box sx={viewMode === 'grid' ? { display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))' }, gap: { xs: 1, md: 2 } } : { display: 'grid', gridTemplateColumns: '1fr', gap: 1 }}>
                 {pageListings.map((listing) => <ProgramClassCard key={listing.classRecord.id} listing={listing} onEnroll={handleEnroll} viewMode={viewMode} isFavorite={favorites.includes(String(listing.classRecord.id))} onToggleFavorite={toggleFavorite} />)}
               </Box>
