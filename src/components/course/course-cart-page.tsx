@@ -1,15 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import AddOutlinedIcon from '@mui/icons-material/AddOutlined'
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
-import ShoppingCartOutlinedIcon from '@mui/icons-material/ShoppingCartOutlined'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
-import Button from '@mui/material/Button'
-import Container from '@mui/material/Container'
-import IconButton from '@mui/material/IconButton'
-import Paper from '@mui/material/Paper'
-import Stack from '@mui/material/Stack'
-import Typography from '@mui/material/Typography'
 import { Footer } from '@/components/footer'
 import { Header } from '@/components/header'
 import EnrollmentModal from '@/components/course/enrollment-modal'
@@ -75,40 +66,42 @@ const CourseCartPage: React.FC<Props> = ({ darkMode, onToggleDarkMode }) => {
 
   return <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
     <Header darkMode={darkMode} onToggleDarkMode={onToggleDarkMode} />
-    <Container maxWidth="md" sx={{ py: { xs: 4, md: 7 }, minHeight: '65vh' }}>
-      <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
-        <ShoppingCartOutlinedIcon color="primary" />
-        <Typography component="h1" variant="h4" sx={{ fontWeight: 800 }}>Your cart</Typography>
-      </Stack>
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      {isLoading ? <Typography color="text.secondary">Loading your cart…</Typography> : cartCourses.length === 0 ? <Paper variant="outlined" sx={{ p: { xs: 3, md: 5 }, textAlign: 'center', borderRadius: 3 }}>
-        <Typography variant="h6" sx={{ fontWeight: 700 }}>Your cart is empty</Typography>
-        <Typography color="text.secondary" sx={{ mt: 0.75, mb: 2.5 }}>Explore the catalog and add a course when you find the right fit.</Typography>
-        <Button variant="contained" startIcon={<AddOutlinedIcon />} onClick={() => navigateTo('/courses')}>Explore courses</Button>
-      </Paper> : <Stack spacing={2}>
-        {unavailableCount > 0 && <Alert severity="warning">{unavailableCount} cart {unavailableCount === 1 ? 'course is' : 'courses are'} no longer available. Remove it before checkout.</Alert>}
-        {cartCourses.map((course) => <Paper key={course.id} variant="outlined" sx={{ p: { xs: 1.5, sm: 2 }, borderRadius: 3 }}>
-          <Stack direction="row" spacing={2} alignItems="center">
-            <Box component="img" src={course.cover} alt="" sx={{ width: { xs: 76, sm: 116 }, aspectRatio: '16 / 9', objectFit: 'cover', borderRadius: 2, flexShrink: 0 }} />
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 750 }}>{course.title}</Typography>
-              <Typography variant="body2" color="text.secondary">{course.category}</Typography>
-              {blockedCourseIds.includes(Number(course.id)) && <Typography variant="caption" color="warning.main">Already enrolled or awaiting payment review</Typography>}
-            </Box>
-            <Typography sx={{ fontWeight: 800, whiteSpace: 'nowrap' }}>${course.price.toFixed(2)}</Typography>
-            <IconButton aria-label={`Remove ${course.title} from cart`} onClick={() => removeCourse(Number(course.id))}><DeleteOutlineIcon /></IconButton>
-          </Stack>
-        </Paper>)}
-        <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 3 }}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-            <Typography variant="h6" sx={{ fontWeight: 750 }}>Total</Typography>
-            <Typography variant="h5" sx={{ fontWeight: 850 }}>${total.toFixed(2)}</Typography>
-          </Stack>
-          {blockedCount > 0 && <Alert severity="warning" sx={{ mb: 2 }}>Remove courses you already have or that are awaiting payment verification before checkout.</Alert>}
-          <Button fullWidth variant="contained" size="large" disabled={checkingAccess || blockedCount > 0 || unavailableCount > 0 || !cartCourses.length} onClick={() => setIsCheckoutOpen(true)}>Checkout</Button>
-        </Paper>
-      </Stack>}
-    </Container>
+    <main className="mx-auto min-h-[65vh] max-w-6xl px-4 py-10 md:py-14">
+      <h1 className="m-0 text-3xl font-extrabold tracking-tight md:text-4xl">Shopping Cart</h1>
+      {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
+      {isLoading ? <p className="mt-6 text-slate-500">Loading your cart…</p> : cartCourses.length === 0 ? <div className="mt-8 rounded-3xl border border-slate-200 p-10 text-center dark:border-slate-700">
+        <p className="m-0 text-lg font-bold">Your cart is empty</p>
+        <p className="mb-5 mt-1 text-slate-500">Explore the catalog and add a course when you find the right fit.</p>
+        <button type="button" onClick={() => navigateTo('/courses')} className="cursor-pointer rounded-xl border-0 bg-violet-600 px-6 py-3 font-bold text-white transition hover:bg-violet-700">Explore courses</button>
+      </div> : <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_320px]">
+        <section>
+          <p className="m-0 mb-3 text-sm font-bold">{cartCourses.length} {cartCourses.length === 1 ? 'Course' : 'Courses'} in Cart</p>
+          {unavailableCount > 0 && <Alert severity="warning" sx={{ mb: 2 }}>{unavailableCount} cart {unavailableCount === 1 ? 'course is' : 'courses are'} no longer available. Remove it before checkout.</Alert>}
+          <ul className="m-0 list-none divide-y divide-slate-200 border-y border-slate-200 p-0 dark:divide-slate-700 dark:border-slate-700">
+            {cartCourses.map((course) => <li key={course.id} className="flex gap-4 py-5">
+              <img src={course.cover} alt="" className="h-20 w-32 shrink-0 rounded-xl object-cover shadow-sm sm:h-24 sm:w-40" />
+              <div className="min-w-0 flex-1">
+                <h2 className="m-0 text-base font-bold leading-snug">{course.title}</h2>
+                <p className="m-0 mt-1 text-xs text-slate-500">{course.category}{course.level ? ` · ${course.level}` : ''}</p>
+                <p className="m-0 mt-1 text-xs"><span className="font-bold text-amber-600">{course.rating.toFixed(1)}</span> <span className="text-amber-500">★</span> <span className="text-slate-500">({course.ratingCount.toLocaleString()} ratings)</span></p>
+                {blockedCourseIds.includes(Number(course.id)) && <p className="m-0 mt-2 text-xs font-semibold text-amber-600">Already enrolled or awaiting payment review</p>}
+              </div>
+              <div className="flex flex-col items-end justify-between">
+                <span className="text-lg font-extrabold text-violet-700 dark:text-violet-400">${course.price.toFixed(2)}</span>
+                <button type="button" aria-label={`Remove ${course.title} from cart`} onClick={() => removeCourse(Number(course.id))} className="cursor-pointer border-0 bg-transparent text-sm font-semibold text-violet-600 hover:underline">Remove</button>
+              </div>
+            </li>)}
+          </ul>
+        </section>
+        <aside className="h-fit rounded-3xl border border-slate-200 p-6 shadow-sm lg:sticky lg:top-6 dark:border-slate-700">
+          <p className="m-0 text-sm font-bold text-slate-500">Total:</p>
+          <p className="m-0 mt-1 text-4xl font-extrabold tracking-tight">${total.toFixed(2)}</p>
+          {blockedCount > 0 && <Alert severity="warning" sx={{ mt: 2 }}>Remove courses you already have or that are awaiting payment verification before checkout.</Alert>}
+          <button type="button" disabled={checkingAccess || blockedCount > 0 || unavailableCount > 0 || !cartCourses.length} onClick={() => setIsCheckoutOpen(true)} className="mt-5 w-full cursor-pointer rounded-xl border-0 bg-violet-600 py-3.5 text-base font-bold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50">Proceed to Checkout →</button>
+          <p className="m-0 mt-3 text-xs text-slate-500">You won't be charged yet</p>
+        </aside>
+      </div>}
+    </main>
     <Footer />
     {modalCourse && <EnrollmentModal course={{ id: Number(modalCourse.id), title: modalCourse.title, price: modalCourse.price }} initialItems={orderItems} open={isCheckoutOpen} onClose={() => setIsCheckoutOpen(false)} onSubmitted={() => { setIsCheckoutOpen(false); setCartIds([]); void saveCourseCartIds([]) }} />}
   </Box>
