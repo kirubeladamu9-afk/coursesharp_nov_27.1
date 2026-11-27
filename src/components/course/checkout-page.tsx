@@ -1,9 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import Alert from '@mui/material/Alert'
-import Box from '@mui/material/Box'
-import Button from '@mui/material/Button'
-import CircularProgress from '@mui/material/CircularProgress'
-import Typography from '@mui/material/Typography'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import { Footer } from '@/components/footer'
 import { Header } from '@/components/header'
@@ -16,6 +12,34 @@ interface Props {
   darkMode: boolean
   onToggleDarkMode: () => void
 }
+
+const CheckoutSkeleton: React.FC = () => <div role="status" aria-label="Loading checkout" className="grid gap-8 md:grid-cols-[minmax(0,1fr)_360px]">
+  <div className="animate-pulse space-y-6">
+    <div className="mx-auto flex max-w-md items-center justify-between gap-4">
+      {[0, 1, 2].map((item) => <div key={item} className="flex flex-1 flex-col items-center gap-2">
+        <div className="size-8 rounded-full bg-slate-200" />
+        <div className="h-3 w-16 rounded bg-slate-200" />
+      </div>)}
+    </div>
+    <div className="space-y-4">
+      <div className="h-14 rounded-2xl bg-slate-200" />
+      <div className="h-14 rounded-2xl bg-slate-200" />
+      <div className="h-14 rounded-2xl bg-slate-200" />
+      <div className="h-14 rounded-2xl bg-teal-100" />
+    </div>
+  </div>
+  <div className="animate-pulse space-y-5 rounded-xl bg-[#F6F8F8] p-6">
+    <div className="h-6 w-40 rounded bg-slate-200" />
+    <div className="space-y-3 border-b border-[#d9e2df] pb-5">
+      <div className="h-4 w-full rounded bg-slate-200" />
+      <div className="h-4 w-2/3 rounded bg-slate-200" />
+    </div>
+    <div className="flex items-center justify-between">
+      <div className="h-5 w-20 rounded bg-slate-200" />
+      <div className="h-7 w-24 rounded bg-slate-200" />
+    </div>
+  </div>
+</div>
 
 const CheckoutPage: React.FC<Props> = ({ darkMode, onToggleDarkMode }) => {
   const [cartCourses, setCartCourses] = useState<Course[] | null>(null)
@@ -42,17 +66,20 @@ const CheckoutPage: React.FC<Props> = ({ darkMode, onToggleDarkMode }) => {
   const initialItems = useMemo(() => (cartCourses ?? []).map((course) => ({ target: { courseId: Number(course.id) } as EnrollmentOrderTarget, title: course.title })), [cartCourses])
   const leadCourse = cartCourses?.[0]
 
-  return <Box sx={{ minHeight: '100vh', bgcolor: '#F4F7F6' }}>
+  return <div className="min-h-screen bg-white">
     <Header darkMode={darkMode} onToggleDarkMode={onToggleDarkMode} />
-    <Box component="main" sx={{ maxWidth: 1120, minHeight: '65vh', mx: 'auto', px: { xs: 2, sm: 3, md: 4 }, py: { xs: 3, md: 5 } }}>
-      <Button startIcon={<ArrowBackIcon />} onClick={() => navigateTo('/cart')} sx={{ mb: 2, px: 0, color: '#127C71', textTransform: 'none', fontWeight: 600 }}>Back to cart</Button>
-      <Typography component="h1" sx={{ mb: 3, fontSize: { xs: 28, md: 34 }, fontWeight: 800, letterSpacing: '-0.02em', color: '#17172B' }}>Checkout</Typography>
-      {error && <Alert severity="error">{error}</Alert>}
-      {!error && !leadCourse && <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}><CircularProgress aria-label="Loading checkout" /></Box>}
+    <main className="mx-auto min-h-[65vh] max-w-[1120px] px-4 py-6 sm:px-6 md:px-8 md:py-10">
+      <button type="button" onClick={() => navigateTo('/cart')} className="mb-4 inline-flex items-center gap-1 text-sm font-semibold text-[#127C71] hover:text-[#0D6A69] hover:underline">
+        <ArrowBackIcon sx={{ fontSize: 18 }} />
+        Back to cart
+      </button>
+      <h1 className="mb-8 text-3xl font-bold tracking-tight text-[#17172B] md:text-4xl">Checkout</h1>
+      {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+      {!error && !leadCourse && <CheckoutSkeleton />}
       {leadCourse && <EnrollmentModal variant="page" course={{ id: Number(leadCourse.id), title: leadCourse.title, price: leadCourse.price }} initialItems={initialItems} open onSubmitted={() => { void saveCourseCartIds([]) }} />}
-    </Box>
+    </main>
     <Footer />
-  </Box>
+  </div>
 }
 
 export default CheckoutPage

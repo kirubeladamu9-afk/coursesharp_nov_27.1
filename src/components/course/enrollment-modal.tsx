@@ -511,7 +511,8 @@ const EnrollmentModal: FC<EnrollmentModalProps> = ({ variant = 'dialog', course,
 
   const priceFor = (target: EnrollmentOrderTarget) => paymentInfo?.items.find((item) => 'courseId' in target ? item.courseId === target.courseId : item.classId === target.classId)
 
-  const renderOrderSummary = () => <Box component="aside" aria-label="Order summary" sx={{ p: { xs: 2.25, sm: 2.5 }, border: 1, borderColor: hairline, borderRadius: '16px', bgcolor: '#fff', boxShadow: '0 8px 24px rgba(18, 124, 113, 0.06)', position: { md: 'sticky' }, top: { md: 24 } }}>
+  const isPage = variant === 'page'
+  const renderOrderSummary = () => <Box component="aside" aria-label="Order summary" sx={{ p: { xs: 2.25, sm: 2.5 }, borderRadius: '12px', border: isPage ? 0 : 1, borderColor: hairline, bgcolor: isPage ? '#F6F8F8' : '#fff', boxShadow: isPage ? 'none' : '0 8px 24px rgba(18, 124, 113, 0.06)', position: { md: 'sticky' }, top: { md: 24 } }}>
     <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
       <Typography variant="h6" sx={{ fontWeight: 750, color: navy }}>Order summary</Typography>
       {!initialItems && <Button size="small" startIcon={<AddIcon />} disabled={cartItems.length >= 10 || isSubmittingPayment} onClick={() => setCatalogOpen(true)} sx={{ textTransform: 'none', color: primary, fontWeight: 600 }}>{cartItems.length >= 10 ? 'Cart full' : 'Add item'}</Button>}
