@@ -41,11 +41,12 @@ import { getAuthenticatedUser, getCourses, getManualOrderInfo, getPublicClasses,
 import { navigateTo } from '@/lib/navigation'
 
 interface EnrollmentModalProps {
+  variant?: 'dialog' | 'page'
   course: Pick<AdminCourse, 'id' | 'title' | 'price'>
   classId?: number | null
   initialItems?: Array<{ target: EnrollmentOrderTarget; title: string }>
   open: boolean
-  onClose: () => void
+  onClose?: () => void
   onSubmitted?: () => void
 }
 
@@ -61,7 +62,7 @@ const muted = '#77788C'
 const hairline = '#d9e2df'
 const primaryGradient = 'linear-gradient(135deg, #1A9A8C 0%, #0D6A69 100%)'
 
-const formContainerSx = { width: '100%', maxWidth: 600, mx: 'auto' } as const
+const formContainerSx = { width: '100%' } as const
 
 const fieldSx = {
   '& .MuiInputLabel-root': { color: muted, fontWeight: 500, border: 0, outline: 'none', boxShadow: 'none', '&.MuiInputLabel-shrink': { bgcolor: '#fff' } },
@@ -141,7 +142,7 @@ const readFileAsDataUrl = (file: File) => new Promise<string>((resolve, reject) 
   reader.readAsDataURL(file)
 })
 
-const EnrollmentModal: FC<EnrollmentModalProps> = ({ course, classId = null, initialItems, open, onClose, onSubmitted }) => {
+const EnrollmentModal: FC<EnrollmentModalProps> = ({ variant = 'dialog', course, classId = null, initialItems, open, onClose, onSubmitted }) => {
   const [activeStep, setActiveStep] = useState(0)
   const [accountError, setAccountError] = useState<string | null>(null)
   const [paymentError, setPaymentError] = useState<string | null>(null)
@@ -510,7 +511,7 @@ const EnrollmentModal: FC<EnrollmentModalProps> = ({ course, classId = null, ini
 
   const priceFor = (target: EnrollmentOrderTarget) => paymentInfo?.items.find((item) => 'courseId' in target ? item.courseId === target.courseId : item.classId === target.classId)
 
-  const renderOrderSummary = () => <Box component="aside" aria-label="Order summary" sx={{ p: { xs: 2.25, sm: 2.5 }, border: 1, borderColor: hairline, borderRadius: '16px', bgcolor: '#fff', boxShadow: '0 8px 24px rgba(18, 124, 113, 0.06)', position: { md: 'sticky' }, top: { md: 0 } }}>
+  const renderOrderSummary = () => <Box component="aside" aria-label="Order summary" sx={{ p: { xs: 2.25, sm: 2.5 }, border: 1, borderColor: hairline, borderRadius: '16px', bgcolor: '#fff', boxShadow: '0 8px 24px rgba(18, 124, 113, 0.06)', position: { md: 'sticky' }, top: { md: 24 } }}>
     <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
       <Typography variant="h6" sx={{ fontWeight: 750, color: navy }}>Order summary</Typography>
       {!initialItems && <Button size="small" startIcon={<AddIcon />} disabled={cartItems.length >= 10 || isSubmittingPayment} onClick={() => setCatalogOpen(true)} sx={{ textTransform: 'none', color: primary, fontWeight: 600 }}>{cartItems.length >= 10 ? 'Cart full' : 'Add item'}</Button>}
@@ -534,8 +535,18 @@ const EnrollmentModal: FC<EnrollmentModalProps> = ({ course, classId = null, ini
     </Box>
   </Box>
 
+  const checkoutBody = submitted ? renderConfirmation() : <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 340px' }, gap: { xs: 3, md: 4 }, alignItems: 'start' }}>
+    <Box sx={{ minWidth: 0 }}>
+      <Stepper activeStep={isAuthenticated ? 0 : activeStep} alternativeLabel sx={stepperSx}>
+        {(isAuthenticated ? ['Payment'] : steps).map((label, index) => <Step key={label} completed={!isAuthenticated && index < activeStep}><StepLabel StepIconComponent={StepBadge}>{label}</StepLabel></Step>)}
+      </Stepper>
+      {activeStep === 0 ? renderPersonalInfo() : activeStep === 1 ? renderVerifyEmail() : renderPaymentInfo()}
+    </Box>
+    {renderOrderSummary()}
+  </Box>
+
   return <>
-  <Dialog open={open} onClose={onClose} fullScreen={isMobile} maxWidth={false} aria-labelledby="enrollment-dialog-title" PaperProps={{ sx: { width: '100%', maxWidth: { sm: 1000 }, m: { xs: 0, sm: 2 }, borderRadius: { xs: 0, sm: '24px' }, overflow: 'hidden', backgroundImage: 'none', boxShadow: '0 24px 64px rgba(23, 23, 43, 0.14)', maxHeight: { sm: 'min(92vh, 960px)' } } }}>
+  {variant === 'page' ? checkoutBody : <Dialog open={open} onClose={onClose} fullScreen={isMobile} maxWidth={false} aria-labelledby="enrollment-dialog-title" PaperProps={{ sx: { width: '100%', maxWidth: { sm: 1000 }, m: { xs: 0, sm: 2 }, borderRadius: { xs: 0, sm: '24px' }, overflow: 'hidden', backgroundImage: 'none', boxShadow: '0 24px 64px rgba(23, 23, 43, 0.14)', maxHeight: { sm: 'min(92vh, 960px)' } } }}>
     <DialogTitle id="enrollment-dialog-title" component="div" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, py: 2, px: { xs: 2.5, sm: 4 }, borderBottom: 1, borderColor: hairline }}>
       <Box>
         <Typography component="span" variant="h5" sx={{ display: 'block', fontWeight: 800, lineHeight: 1.25, color: navy }}>Checkout</Typography>
@@ -544,17 +555,9 @@ const EnrollmentModal: FC<EnrollmentModalProps> = ({ course, classId = null, ini
       <IconButton aria-label="Close enrollment" onClick={onClose} sx={{ width: 40, height: 40, flexShrink: 0, borderRadius: '12px', color: muted, bgcolor: '#F2F6F5', '&:hover': { color: primary, bgcolor: lavender } }}><CloseIcon /></IconButton>
     </DialogTitle>
     <DialogContent sx={{ px: { xs: 2.5, sm: 4 }, pt: { xs: 3, sm: 3.5 }, pb: { xs: 3, sm: 4 }, overflowY: 'auto' }}>
-      {submitted ? renderConfirmation() : <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 340px' }, gap: { xs: 3, md: 4 }, alignItems: 'start' }}>
-        <Box sx={{ minWidth: 0 }}>
-          <Stepper activeStep={isAuthenticated ? 0 : activeStep} alternativeLabel sx={stepperSx}>
-            {(isAuthenticated ? ['Payment'] : steps).map((label, index) => <Step key={label} completed={!isAuthenticated && index < activeStep}><StepLabel StepIconComponent={StepBadge}>{label}</StepLabel></Step>)}
-          </Stepper>
-          {activeStep === 0 ? renderPersonalInfo() : activeStep === 1 ? renderVerifyEmail() : renderPaymentInfo()}
-        </Box>
-        {renderOrderSummary()}
-      </Box>}
+      {checkoutBody}
     </DialogContent>
-  </Dialog>
+  </Dialog>}
   <Dialog open={catalogOpen} onClose={() => setCatalogOpen(false)} fullWidth maxWidth="sm" aria-labelledby="catalog-picker-title">
     <DialogTitle id="catalog-picker-title">Add to your order</DialogTitle>
     <DialogContent dividers>

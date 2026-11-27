@@ -3,8 +3,7 @@ import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import { Footer } from '@/components/footer'
 import { Header } from '@/components/header'
-import EnrollmentModal from '@/components/course/enrollment-modal'
-import { getAuthenticatedUser, getCourseCartIds, getCourses, getMyEnrollments, getMyPayments, loadCourseCartIds, saveCourseCartIds, type EnrollmentOrderTarget } from '@/services/api'
+import { getAuthenticatedUser, getCourseCartIds, getCourses, getMyEnrollments, getMyPayments, loadCourseCartIds, saveCourseCartIds } from '@/services/api'
 import { navigateTo } from '@/lib/navigation'
 import { type Course } from '@/interfaces/course'
 
@@ -43,7 +42,6 @@ const CourseCartPage: React.FC<Props> = ({ darkMode, onToggleDarkMode }) => {
   const [cartIds, setCartIds] = useState<number[]>(getCourseCartIds())
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false)
   const [blockedCourseIds, setBlockedCourseIds] = useState<number[]>([])
   const [checkingAccess, setCheckingAccess] = useState(Boolean(getAuthenticatedUser()))
 
@@ -80,11 +78,9 @@ const CourseCartPage: React.FC<Props> = ({ darkMode, onToggleDarkMode }) => {
     const course = courses.find((item) => Number(item.id) === id)
     return course ? [course] : []
   }), [cartIds, courses])
-  const orderItems = useMemo(() => cartCourses.map((course) => ({ target: { courseId: Number(course.id) } as EnrollmentOrderTarget, title: course.title })), [cartCourses])
   const total = cartCourses.reduce((sum, course) => sum + course.price, 0)
   const blockedCount = cartIds.filter((id) => blockedCourseIds.includes(id)).length
   const unavailableCount = cartIds.length - cartCourses.length
-  const modalCourse = cartCourses[0]
 
   const removeCourse = (id: number) => {
     const next = cartIds.filter((courseId) => courseId !== id)
@@ -123,13 +119,12 @@ const CourseCartPage: React.FC<Props> = ({ darkMode, onToggleDarkMode }) => {
           <p className="m-0 text-sm font-semibold text-slate-500 dark:text-slate-400">Total:</p>
           <p className="m-0 mt-1 text-4xl font-extrabold tracking-tight">${total.toFixed(2)}</p>
           {blockedCount > 0 && <Alert severity="warning" sx={{ mt: 2 }}>Remove courses you already have or that are awaiting payment verification before checkout.</Alert>}
-          <button type="button" disabled={checkingAccess || blockedCount > 0 || unavailableCount > 0 || !cartCourses.length} onClick={() => setIsCheckoutOpen(true)} className="mt-5 w-full cursor-pointer rounded-lg border-0 bg-[#127C71] py-3 text-base font-bold text-white transition hover:bg-[#0D6A69] disabled:cursor-not-allowed disabled:opacity-50">Checkout</button>
+          <button type="button" disabled={checkingAccess || blockedCount > 0 || unavailableCount > 0 || !cartCourses.length} onClick={() => navigateTo('/checkout')} className="mt-5 w-full cursor-pointer rounded-lg border-0 bg-[#127C71] py-3 text-base font-bold text-white transition hover:bg-[#0D6A69] disabled:cursor-not-allowed disabled:opacity-50">Checkout</button>
           <p className="m-0 mt-3 text-center text-xs text-slate-500">You won't be charged yet</p>
         </aside>
       </div>}
     </main>
     <Footer />
-    {modalCourse && <EnrollmentModal course={{ id: Number(modalCourse.id), title: modalCourse.title, price: modalCourse.price }} initialItems={orderItems} open={isCheckoutOpen} onClose={() => setIsCheckoutOpen(false)} onSubmitted={() => { setIsCheckoutOpen(false); setCartIds([]); void saveCourseCartIds([]) }} />}
   </Box>
 }
 

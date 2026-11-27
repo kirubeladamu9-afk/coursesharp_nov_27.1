@@ -20,6 +20,7 @@ const AdminDashboard = loadSection(() => import('@/components/admin/admin-dashbo
 const CourseDetailPage = loadSection(() => import('@/components/course/course-detail-page'))
 const CourseMarketplacePage = loadSection(() => import('@/components/course/course-marketplace-page'))
 const CourseCartPage = loadSection(() => import('@/components/course/course-cart-page'))
+const CheckoutPage = loadSection(() => import('@/components/course/checkout-page'))
 const TrainingProgramsPage = loadSection<{ courses: Course[]; darkMode: boolean; onToggleDarkMode: () => void; programId?: string }>(() => import('@/components/home/training-programs-page'))
 const StudentDashboard = loadSection(() => import('@/components/course/student-dashboard'))
 const AccountSecurity = loadSection(() => import('@/components/course/account-security'))
@@ -114,6 +115,7 @@ const App: React.FC<AppProps> = ({ darkMode, onToggleDarkMode }) => {
   const isSetPasswordPath = /^\/set-password\/?$/.test(currentPath)
   const isCourseMarketplacePath = /^\/courses\/?$/.test(currentPath)
   const isCourseCartPath = /^\/cart\/?$/.test(currentPath)
+  const isCheckoutPath = /^\/checkout\/?$/.test(currentPath)
   const isTrainingProgramsPath = /^\/training-programs(?:\/|$)/.test(currentPath)
   const trainingProgramMatch = currentPath.match(/^\/training-programs\/([^/]+)\/?$/)
   const courseMatch = currentPath.match(/^\/courses\/([^/]+)\/?$/)
@@ -151,13 +153,15 @@ const App: React.FC<AppProps> = ({ darkMode, onToggleDarkMode }) => {
                         ? 'Courses'
                         : isCourseCartPath
                           ? 'Cart'
+                          : isCheckoutPath
+                            ? 'Checkout'
                           : isTrainingProgramsPath
                           ? 'Training Programs'
                           : courseMatch
                           ? 'Course'
                           : 'Home'
     document.title = `${SITE_NAME} | ${pageName}`
-  }, [isSignInPath, currentPath, isAboutPath, isAdminPath, isBookstorePath, isContactPath, isCourseMarketplacePath, isCourseCartPath, isDashboardPath, isPracticeCatalogPath, isTrainingProgramsPath, isTutorPath, practiceExamMatch, courseMatch])
+  }, [isSignInPath, currentPath, isAboutPath, isAdminPath, isBookstorePath, isContactPath, isCourseMarketplacePath, isCourseCartPath, isCheckoutPath, isDashboardPath, isPracticeCatalogPath, isTrainingProgramsPath, isTutorPath, practiceExamMatch, courseMatch])
 
   useEffect(() => {
     if (isAdminPath || isDashboardPath || isTutorPath || isSecurityPath || window.location.hash) return
@@ -207,6 +211,7 @@ const App: React.FC<AppProps> = ({ darkMode, onToggleDarkMode }) => {
   if (isBookstorePath) return <RouteSuspense path={currentPath}><BookstorePage darkMode={darkMode} onToggleDarkMode={onToggleDarkMode} /></RouteSuspense>
   if (isCourseMarketplacePath) return <RouteSuspense path={currentPath}><CourseMarketplacePage courses={homeCourses ?? []} darkMode={darkMode} onToggleDarkMode={onToggleDarkMode} isLoading={homeCourses === null} /></RouteSuspense>
   if (isCourseCartPath) return <RouteSuspense path={currentPath}><CourseCartPage darkMode={darkMode} onToggleDarkMode={onToggleDarkMode} /></RouteSuspense>
+  if (isCheckoutPath) return <RouteSuspense path={currentPath}><CheckoutPage darkMode={darkMode} onToggleDarkMode={onToggleDarkMode} /></RouteSuspense>
   if (isTrainingProgramsPath) return <RouteSuspense path={currentPath}><TrainingProgramsPage courses={homeCourses ?? []} darkMode={darkMode} onToggleDarkMode={onToggleDarkMode} programId={trainingProgramMatch ? decodeURIComponent(trainingProgramMatch[1]) : undefined} /></RouteSuspense>
   if (isContactPath) return <RouteSuspense path={currentPath}><InfoPage kind="contact" darkMode={darkMode} onToggleDarkMode={onToggleDarkMode} /></RouteSuspense>
   if (isSignInPath) return <RouteTransition path={currentPath}><Box component="main"><Header darkMode={darkMode} onToggleDarkMode={onToggleDarkMode} /><SignInPage mode="sign-in" /><Footer /></Box></RouteTransition>
