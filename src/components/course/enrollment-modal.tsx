@@ -610,13 +610,13 @@ const EnrollmentModal: FC<EnrollmentModalProps> = ({ variant = 'dialog', course,
     </ul>
     <div className="mt-2 border-t border-slate-200 pt-5">
       {paymentInfo && <div className="flex items-center justify-between gap-4 pb-3">
-        <p className="text-base text-slate-600">Subtotal</p>
-        <p className="whitespace-nowrap text-base font-semibold text-slate-950">{paymentInfo.currency} {cartItems.reduce((sum, item) => sum + (priceFor(item.target)?.amount ?? 0), 0).toFixed(2)}</p>
+        <p className="text-sm text-slate-600">Subtotal</p>
+        <p className="whitespace-nowrap text-sm font-semibold text-slate-950">{paymentInfo.currency} {cartItems.reduce((sum, item) => sum + (priceFor(item.target)?.amount ?? 0), 0).toFixed(2)}</p>
       </div>}
       <div className="flex items-center justify-between gap-4">
-        <p className="text-lg font-medium text-slate-950">Total</p>
+        <p className="text-base font-medium text-slate-950">Total</p>
         {paymentInfo
-          ? <p className="whitespace-nowrap text-2xl font-bold tracking-[-0.02em] text-slate-950">{paymentInfo.currency} {paymentInfo.amount.toFixed(2)}</p>
+          ? <p className="whitespace-nowrap text-xl font-bold tracking-[-0.02em] text-slate-950">{paymentInfo.currency} {paymentInfo.amount.toFixed(2)}</p>
           : !paymentInfoError && <CircularProgress size={22} aria-label="Loading order total" />}
       </div>
     </div>
