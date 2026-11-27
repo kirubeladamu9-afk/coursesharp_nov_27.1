@@ -1,0 +1,16 @@
+{
+  "name": "Coursesharp",
+  "short_name": "Coursesharp",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fbfbfb",
+  "theme_color": "#fbfbfb",
+  "icons": [
+    {
+      "src": "/brand/pwa-icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
