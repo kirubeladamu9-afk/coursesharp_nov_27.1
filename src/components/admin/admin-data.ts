@@ -143,6 +143,7 @@ export interface AdminLesson {
   simulation?: SimulationConfig
   stepByStepSolver?: StepByStepSolverConfig
   simulationToolId?: string
+  simulationLab?: boolean
   platformEngineId?: string
   curriculumTopic?: string
   quizQuestions?: QuizQuestion[]
