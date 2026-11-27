@@ -18,7 +18,6 @@ import Typography from '@mui/material/Typography'
 import AccountBalanceOutlinedIcon from '@mui/icons-material/AccountBalanceOutlined'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import CheckOutlinedIcon from '@mui/icons-material/CheckOutlined'
-import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import CloseIcon from '@mui/icons-material/Close'
 import CloudUploadOutlinedIcon from '@mui/icons-material/CloudUploadOutlined'
 import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined'
@@ -516,6 +515,7 @@ const EnrollmentModal: FC<EnrollmentModalProps> = ({ variant = 'dialog', course,
           </Box>
           <Typography variant="caption" color="text.secondary">Supported formats: JPG, PNG, or WebP. Maximum file size: 6 MB.</Typography>
           {proofFile && <Typography variant="body2" sx={{ color: '#047857', overflowWrap: 'anywhere' }}>Attached: {proofFile.name}</Typography>}
+          {proofData && <Box component="img" src={proofData} alt="Payment screenshot preview" sx={{ display: 'block', width: '100%', maxHeight: 240, objectFit: 'contain', borderRadius: '12px', border: 1, borderColor: hairline, bgcolor: '#fff' }} />}
           {paymentError && <Alert severity="error">{paymentError}</Alert>}
           <Stack direction={{ xs: 'column-reverse', sm: 'row' }} spacing={1.5} sx={{ pt: 1, borderTop: 1, borderColor: hairline }}>
             {!isAuthenticated && <Button fullWidth variant="outlined" size="large" onClick={() => setActiveStep(0)} disabled={isSubmittingPayment} sx={secondaryButtonSx}>Back</Button>}
@@ -575,15 +575,22 @@ const EnrollmentModal: FC<EnrollmentModalProps> = ({ variant = 'dialog', course,
       ? { title: 'Verify email', description: 'Enter the 6-digit code we sent to your email.' }
       : { title: 'Payment details', description: 'Scan the QR code, pay the exact total, then upload your payment screenshot.' }
 
-  const renderProgress = () => <nav aria-label="Checkout progress" className="mb-8 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-    {progressLabels.map((label, index) => {
-      const completed = index < currentStep
-      const current = index === currentStep
-      return <Fragment key={label}>
-        {index > 0 && <ChevronRightIcon sx={{ fontSize: 16 }} className="text-gray-400" />}
-        <span className={`border-b-2 pb-1 font-semibold ${current ? 'border-[#127C71] text-gray-900' : completed ? 'border-transparent text-[#127C71]' : 'border-transparent text-gray-400'}`}>{label}</span>
-      </Fragment>
-    })}
+  const renderProgress = () => <nav aria-label="Checkout progress" className="mb-10">
+    <ol className="flex items-center">
+      {progressLabels.map((label, index) => {
+        const completed = index < currentStep
+        const current = index === currentStep
+        return <Fragment key={label}>
+          {index > 0 && <li aria-hidden="true" className={`mx-2 h-0.5 flex-1 rounded-full sm:mx-4 ${index <= currentStep ? 'bg-[#127C71]' : 'bg-slate-200'}`} />}
+          <li aria-current={current ? 'step' : undefined} className="flex shrink-0 items-center gap-2.5">
+            <span className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold ${completed || current ? 'bg-[#127C71] text-white' : 'bg-slate-200 text-slate-500'} ${current ? 'ring-4 ring-[#127C71]/20' : ''}`}>
+              {completed ? <CheckOutlinedIcon sx={{ fontSize: 18 }} /> : index + 1}
+            </span>
+            <span className={`text-sm ${current ? 'font-bold text-slate-950' : completed ? 'font-semibold text-[#127C71]' : 'font-medium text-slate-400'} ${current ? '' : 'hidden sm:inline'}`}>{label}</span>
+          </li>
+        </Fragment>
+      })}
+    </ol>
   </nav>
 
   const renderPageSummary = () => <aside aria-label="Order summary" className="h-fit rounded-3xl bg-[#f5f7fa] px-5 pb-6 pt-5 sm:px-7 sm:pb-8 sm:pt-7">
@@ -601,11 +608,17 @@ const EnrollmentModal: FC<EnrollmentModalProps> = ({ variant = 'dialog', course,
         </li>
       })}
     </ul>
-    <div className="mt-2 flex items-center justify-between gap-4 border-t border-slate-200 pt-5">
-      <p className="text-lg font-medium text-slate-950">Total</p>
-      {paymentInfo
-        ? <p className="whitespace-nowrap text-2xl font-bold tracking-[-0.02em] text-slate-950">{paymentInfo.currency} {paymentInfo.amount.toFixed(2)}</p>
-        : !paymentInfoError && <CircularProgress size={22} aria-label="Loading order total" />}
+    <div className="mt-2 border-t border-slate-200 pt-5">
+      {paymentInfo && <div className="flex items-center justify-between gap-4 pb-3">
+        <p className="text-base text-slate-600">Subtotal</p>
+        <p className="whitespace-nowrap text-base font-semibold text-slate-950">{paymentInfo.currency} {cartItems.reduce((sum, item) => sum + (priceFor(item.target)?.amount ?? 0), 0).toFixed(2)}</p>
+      </div>}
+      <div className="flex items-center justify-between gap-4">
+        <p className="text-lg font-medium text-slate-950">Total</p>
+        {paymentInfo
+          ? <p className="whitespace-nowrap text-2xl font-bold tracking-[-0.02em] text-slate-950">{paymentInfo.currency} {paymentInfo.amount.toFixed(2)}</p>
+          : !paymentInfoError && <CircularProgress size={22} aria-label="Loading order total" />}
+      </div>
     </div>
   </aside>
 
