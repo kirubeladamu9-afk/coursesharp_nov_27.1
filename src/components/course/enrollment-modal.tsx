@@ -18,6 +18,8 @@ import Typography from '@mui/material/Typography'
 import AccountBalanceOutlinedIcon from '@mui/icons-material/AccountBalanceOutlined'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import CheckOutlinedIcon from '@mui/icons-material/CheckOutlined'
+import ChevronRightIcon from '@mui/icons-material/ChevronRight'
+import SchoolOutlinedIcon from '@mui/icons-material/SchoolOutlined'
 import CloseIcon from '@mui/icons-material/Close'
 import CloudUploadOutlinedIcon from '@mui/icons-material/CloudUploadOutlined'
 import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined'
@@ -31,7 +33,7 @@ import QrCode2OutlinedIcon from '@mui/icons-material/QrCode2Outlined'
 import VerifiedUserOutlinedIcon from '@mui/icons-material/VerifiedUserOutlined'
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined'
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined'
-import { type FC, type FormEvent, type ReactNode, useEffect, useState } from 'react'
+import { Fragment, type FC, type FormEvent, type ReactNode, useEffect, useState } from 'react'
 import AddIcon from '@mui/icons-material/Add'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
@@ -546,8 +548,66 @@ const EnrollmentModal: FC<EnrollmentModalProps> = ({ variant = 'dialog', course,
     {renderOrderSummary()}
   </Box>
 
+  const progressLabels = isAuthenticated ? ['Payment'] : steps
+  const currentStep = isAuthenticated ? 0 : activeStep
+  const stepCopy = activeStep === 0
+    ? { title: 'Account details', description: 'Enter your details to continue to verification.' }
+    : activeStep === 1
+      ? { title: 'Verify email', description: 'Enter the 6-digit code we sent to your email.' }
+      : { title: 'Payment details', description: 'Scan the QR code, pay the exact total, then upload your payment screenshot.' }
+
+  const renderProgress = () => <nav aria-label="Checkout progress" className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 border-b border-gray-200 bg-white px-4 py-4 text-xs sm:gap-x-4 sm:text-base">
+    {progressLabels.map((label, index) => {
+      const completed = index < currentStep
+      const current = index === currentStep
+      return <Fragment key={label}>
+        {index > 0 && <ChevronRightIcon sx={{ fontSize: 16 }} className="text-gray-400" />}
+        <div className="flex items-center gap-2 sm:gap-3">
+          <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${completed ? 'bg-emerald-200 text-emerald-700' : current ? 'bg-[#127C71] text-white ring-2 ring-[#127C71] ring-offset-2' : 'bg-gray-400 text-white'}`}>{completed ? <CheckOutlinedIcon sx={{ fontSize: 16 }} /> : index + 1}</span>
+          <span className={`font-semibold ${completed || current ? 'text-gray-900' : 'text-gray-500'}`}>{label}</span>
+        </div>
+      </Fragment>
+    })}
+  </nav>
+
+  const renderPageSummary = () => <section className="px-4 pt-8 sm:px-10 lg:px-12 lg:pb-8">
+    <p className="text-xl font-medium text-gray-900">Order Summary</p>
+    <p className="text-gray-400">Review the courses in your order before paying.</p>
+    <div className="mt-8 space-y-3 rounded-lg border border-gray-200 bg-white px-2 py-4 sm:px-6">
+      {cartItems.map((item) => {
+        const amount = priceFor(item.target)?.amount
+        return <div key={'courseId' in item.target ? `course-${item.target.courseId}` : `class-${item.target.classId}`} className="flex flex-col rounded-lg bg-white sm:flex-row">
+          <div className="m-2 grid h-24 w-28 shrink-0 place-items-center rounded-md border border-[#d9e2df] bg-[#E6F4F1] text-[#127C71]"><SchoolOutlinedIcon /></div>
+          <div className="flex min-w-0 w-full flex-col px-4 py-4">
+            <span className="font-semibold text-gray-900 break-words">{item.title}</span>
+            <span className="text-sm text-gray-400">{'courseId' in item.target ? 'Course' : 'Class'}</span>
+            {amount !== undefined && paymentInfo && <p className="mt-auto pt-2 text-lg font-bold text-gray-900">{paymentInfo.currency} {amount.toFixed(2)}</p>}
+          </div>
+        </div>
+      })}
+    </div>
+    {paymentInfo
+      ? <div className="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">
+        <p className="text-sm font-medium text-gray-900">Total</p>
+        <p className="text-2xl font-semibold text-gray-900">{paymentInfo.currency} {paymentInfo.amount.toFixed(2)}</p>
+      </div>
+      : !paymentInfoError && <div className="mt-6 flex justify-end"><CircularProgress size={22} aria-label="Loading order total" /></div>}
+  </section>
+
+  const pageLayout = submitted ? renderConfirmation() : <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+    {renderProgress()}
+    <div className="grid lg:grid-cols-2">
+      {renderPageSummary()}
+      <section className="mt-10 bg-gray-50 px-4 pb-8 pt-8 sm:px-10 lg:mt-0 lg:px-12">
+        <p className="text-xl font-medium text-gray-900">{stepCopy.title}</p>
+        <p className="mb-6 text-gray-400">{stepCopy.description}</p>
+        {activeStep === 0 ? renderPersonalInfo() : activeStep === 1 ? renderVerifyEmail() : renderPaymentInfo()}
+      </section>
+    </div>
+  </div>
+
   return <>
-  {variant === 'page' ? checkoutBody : <Dialog open={open} onClose={onClose} fullScreen={isMobile} maxWidth={false} aria-labelledby="enrollment-dialog-title" PaperProps={{ sx: { width: '100%', maxWidth: { sm: 1000 }, m: { xs: 0, sm: 2 }, borderRadius: { xs: 0, sm: '24px' }, overflow: 'hidden', backgroundImage: 'none', boxShadow: '0 24px 64px rgba(23, 23, 43, 0.14)', maxHeight: { sm: 'min(92vh, 960px)' } } }}>
+  {variant === 'page' ? pageLayout : <Dialog open={open} onClose={onClose} fullScreen={isMobile} maxWidth={false} aria-labelledby="enrollment-dialog-title" PaperProps={{ sx: { width: '100%', maxWidth: { sm: 1000 }, m: { xs: 0, sm: 2 }, borderRadius: { xs: 0, sm: '24px' }, overflow: 'hidden', backgroundImage: 'none', boxShadow: '0 24px 64px rgba(23, 23, 43, 0.14)', maxHeight: { sm: 'min(92vh, 960px)' } } }}>
     <DialogTitle id="enrollment-dialog-title" component="div" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, py: 2, px: { xs: 2.5, sm: 4 }, borderBottom: 1, borderColor: hairline }}>
       <Box>
         <Typography component="span" variant="h5" sx={{ display: 'block', fontWeight: 800, lineHeight: 1.25, color: navy }}>Checkout</Typography>
