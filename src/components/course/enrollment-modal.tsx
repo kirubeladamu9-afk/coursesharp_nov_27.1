@@ -438,10 +438,10 @@ const EnrollmentModal: FC<EnrollmentModalProps> = ({ course, classId = null, ini
   const renderPaymentInfo = () => <Stack spacing={{ xs: 2, sm: 2.5 }}>
     {paymentInfoError && <Alert severity="error">{paymentInfoError}</Alert>}
     {!paymentInfo && !paymentInfoError && <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress aria-label="Loading payment information" /></Box>}
-    {paymentInfo && <>
-      <Box sx={{ p: { xs: 2, sm: 2.5 }, border: 1, borderColor: '#CDE7E1', borderRadius: '16px', bgcolor: '#F2FAF8' }}>
+    {paymentInfo && <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1.3fr) minmax(0, 1fr)' }, gap: { xs: 2.5, md: 3 }, alignItems: 'start' }}>
+      <Box sx={{ p: { xs: 2, sm: 2.5 }, border: 1, borderColor: '#CDE7E1', borderRadius: '16px', bgcolor: '#F2FAF8', gridColumn: { md: 2 }, gridRow: { md: '1 / span 2' }, position: { md: 'sticky' }, top: { md: 16 } }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
-          <Box><Typography variant="h6" sx={{ fontWeight: 750, color: navy }}>Order items</Typography><Typography variant="body2" color="text.secondary">Prices are confirmed by the server.</Typography></Box>
+          <Box><Typography variant="h6" sx={{ fontWeight: 750, color: navy }}>Order summary</Typography><Typography variant="body2" color="text.secondary">Prices are confirmed by the server.</Typography></Box>
           {!initialItems && <Button variant="outlined" startIcon={<AddIcon />} disabled={cartItems.length >= 10 || isSubmittingPayment} onClick={() => setCatalogOpen(true)} sx={{ borderRadius: 2, textTransform: 'none', color: primary, borderColor: primary }}>{cartItems.length >= 10 ? 'Cart full' : 'Add item'}</Button>}
         </Stack>
         <Stack spacing={1}>
@@ -459,7 +459,7 @@ const EnrollmentModal: FC<EnrollmentModalProps> = ({ course, classId = null, ini
           <Typography variant="h6" sx={{ fontWeight: 700, color: navy }}>Scan to Pay</Typography>
         </Stack>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Open your mobile banking or payment app and scan the QR code to complete your payment.</Typography>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 0.9fr) minmax(0, 1.1fr)' }, gap: { xs: 2, md: 2.5 } }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 0.9fr) minmax(0, 1.1fr)' }, gap: { xs: 2, md: 2.5 } }}>
           <Box sx={{ display: 'grid', alignContent: 'start', justifyItems: 'center', gap: 1.5, p: { xs: 2, sm: 2.5 }, border: 1, borderColor: hairline, borderRadius: '16px', bgcolor: '#fff', boxShadow: '0 8px 24px rgba(18, 124, 113, 0.06)' }}>
             <Typography variant="subtitle2" sx={{ alignSelf: 'start', fontWeight: 700, color: navy }}>Business payment QR</Typography>
             <Box sx={{ display: 'grid', placeItems: 'center', width: '100%', minHeight: { xs: 240, sm: 280 }, borderRadius: '14px', bgcolor: '#F4FAF8' }}>
@@ -521,7 +521,7 @@ const EnrollmentModal: FC<EnrollmentModalProps> = ({ course, classId = null, ini
           <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.6 }}><CheckOutlinedIcon sx={{ fontSize: 15 }} /> Your payment is secure and protected.</Typography>
         </Stack>
       </Box>
-    </>}
+    </Box>}
   </Stack>
 
   return <>
