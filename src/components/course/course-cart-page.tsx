@@ -95,38 +95,36 @@ const CourseCartPage: React.FC<Props> = ({ darkMode, onToggleDarkMode }) => {
   return <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
     <Header darkMode={darkMode} onToggleDarkMode={onToggleDarkMode} />
     <main className="mx-auto min-h-[65vh] max-w-6xl px-4 py-10 md:py-14">
-      <h1 className="m-0 text-3xl font-extrabold tracking-tight md:text-4xl">Shopping Cart</h1>
+      <h1 className="m-0 text-3xl font-extrabold tracking-tight md:text-4xl">Shopping cart</h1>
       {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
       {isLoading ? <CartSkeleton rows={Math.max(cartIds.length, 1)} /> : cartCourses.length === 0 ? <div className="mt-8 rounded-3xl border border-slate-200 p-10 text-center dark:border-slate-700">
         <p className="m-0 text-lg font-bold">Your cart is empty</p>
         <p className="mb-5 mt-1 text-slate-500">Explore the catalog and add a course when you find the right fit.</p>
         <button type="button" onClick={() => navigateTo('/courses')} className="cursor-pointer rounded-xl border-0 bg-[#127C71] px-6 py-3 font-bold text-white transition hover:bg-[#0D6A69]">Explore courses</button>
-      </div> : <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_320px]">
+      </div> : <div className="mt-8 grid gap-10 lg:grid-cols-[1fr_340px]">
         <section>
-          <p className="m-0 mb-3 text-sm font-bold">{cartCourses.length} {cartCourses.length === 1 ? 'Course' : 'Courses'} in Cart</p>
+          <p className="m-0 mb-4 border-b border-slate-200 pb-3 text-sm font-bold text-slate-600 dark:border-slate-700 dark:text-slate-300">{cartCourses.length} {cartCourses.length === 1 ? 'Course' : 'Courses'} in Cart</p>
           {unavailableCount > 0 && <Alert severity="warning" sx={{ mb: 2 }}>{unavailableCount} cart {unavailableCount === 1 ? 'course is' : 'courses are'} no longer available. Remove it before checkout.</Alert>}
-          <ul className="m-0 list-none divide-y divide-slate-200 border-y border-slate-200 p-0 dark:divide-slate-700 dark:border-slate-700">
-            {cartCourses.map((course) => <li key={course.id} className="flex gap-4 py-5">
-              <img src={course.cover} alt="" className="h-20 w-32 shrink-0 rounded-xl object-cover shadow-sm sm:h-24 sm:w-40" />
+          <ul className="m-0 list-none divide-y divide-slate-200 p-0 dark:divide-slate-700">
+            {cartCourses.map((course) => <li key={course.id} className="flex gap-5 py-6 first:pt-0">
+              <img src={course.cover} alt="" className="h-20 w-32 shrink-0 rounded-lg object-cover sm:h-24 sm:w-44" />
               <div className="min-w-0 flex-1">
-                <h2 className="m-0 text-base font-bold leading-snug">{course.title}</h2>
-                <p className="m-0 mt-1 text-xs text-slate-500">{course.category}{course.level ? ` · ${course.level}` : ''}</p>
-                <p className="m-0 mt-1 text-xs"><span className="font-bold text-amber-600">{course.rating.toFixed(1)}</span> <span className="text-amber-500">★</span> <span className="text-slate-500">({course.ratingCount.toLocaleString()} ratings)</span></p>
-                {blockedCourseIds.includes(Number(course.id)) && <p className="m-0 mt-2 text-xs font-semibold text-amber-600">Already enrolled or awaiting payment review</p>}
+                <h2 className="m-0 text-lg font-bold leading-snug">{course.title}</h2>
+                <p className="m-0 mt-1 text-sm text-slate-500">{course.category}{course.level ? ` · ${course.level}` : ''}</p>
+                <p className="m-0 mt-1 text-sm"><span className="font-bold text-amber-600">{course.rating.toFixed(1)}</span> <span className="text-amber-500">★</span> <span className="text-slate-500">({course.ratingCount.toLocaleString()} ratings)</span></p>
+                {blockedCourseIds.includes(Number(course.id)) && <p className="m-0 mt-2 text-sm font-semibold text-amber-600">Already enrolled or awaiting payment review</p>}
+                <button type="button" aria-label={`Remove ${course.title} from cart`} onClick={() => removeCourse(Number(course.id))} className="mt-2 cursor-pointer border-0 bg-transparent p-0 text-sm font-semibold text-[#127C71] hover:underline dark:text-[#9FF1D2]">Remove</button>
               </div>
-              <div className="flex flex-col items-end justify-between">
-                <span className="text-lg font-extrabold text-[#127C71] dark:text-[#9FF1D2]">${course.price.toFixed(2)}</span>
-                <button type="button" aria-label={`Remove ${course.title} from cart`} onClick={() => removeCourse(Number(course.id))} className="cursor-pointer border-0 bg-transparent text-sm font-semibold text-[#127C71] hover:underline">Remove</button>
-              </div>
+              <span className="shrink-0 text-lg font-bold">${course.price.toFixed(2)}</span>
             </li>)}
           </ul>
         </section>
-        <aside className="h-fit rounded-3xl border border-slate-200 p-6 shadow-sm lg:sticky lg:top-6 dark:border-slate-700">
-          <p className="m-0 text-sm font-bold text-slate-500">Total:</p>
+        <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-6 shadow-lg lg:sticky lg:top-6 dark:border-slate-700 dark:bg-slate-900">
+          <p className="m-0 text-sm font-semibold text-slate-500 dark:text-slate-400">Total:</p>
           <p className="m-0 mt-1 text-4xl font-extrabold tracking-tight">${total.toFixed(2)}</p>
           {blockedCount > 0 && <Alert severity="warning" sx={{ mt: 2 }}>Remove courses you already have or that are awaiting payment verification before checkout.</Alert>}
-          <button type="button" disabled={checkingAccess || blockedCount > 0 || unavailableCount > 0 || !cartCourses.length} onClick={() => setIsCheckoutOpen(true)} className="mt-5 w-full cursor-pointer rounded-xl border-0 bg-[#127C71] py-3.5 text-base font-bold text-white transition hover:bg-[#0D6A69] disabled:cursor-not-allowed disabled:opacity-50">Proceed to Checkout →</button>
-          <p className="m-0 mt-3 text-xs text-slate-500">You won't be charged yet</p>
+          <button type="button" disabled={checkingAccess || blockedCount > 0 || unavailableCount > 0 || !cartCourses.length} onClick={() => setIsCheckoutOpen(true)} className="mt-5 w-full cursor-pointer rounded-lg border-0 bg-[#127C71] py-3 text-base font-bold text-white transition hover:bg-[#0D6A69] disabled:cursor-not-allowed disabled:opacity-50">Checkout</button>
+          <p className="m-0 mt-3 text-center text-xs text-slate-500">You won't be charged yet</p>
         </aside>
       </div>}
     </main>
