@@ -3867,7 +3867,7 @@ const getPaymentOrderItems = (queryable, paymentId, includeRemoved = false) => q
   SELECT id::INTEGER AS id, course_id::INTEGER AS "courseId", class_id::INTEGER AS "classId",
          title, amount::FLOAT AS amount, removed_at IS NOT NULL AS removed
   FROM payment_order_items
-  WHERE payment_id = ${paymentId} ${includeRemoved ? queryable`TRUE` : queryable`removed_at IS NULL`}
+  WHERE payment_id = ${paymentId} AND ${includeRemoved ? queryable`TRUE` : queryable`removed_at IS NULL`}
   ORDER BY id
 `
 const insertPaymentOrderNotification = (queryable, { paymentId, userId, type, message, metadata = {} }) => queryable`
