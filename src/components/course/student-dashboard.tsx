@@ -2152,10 +2152,11 @@ const SimulationLabViewer: FC<{ labId?: string }> = ({ labId }) => {
 
   const lab = catalog?.find((item) => item.id === labId)
   const validPath = lab?.path.split('/').every((segment) => /^[a-z0-9-]+(?:\.html)?$/i.test(segment))
-  const source = lab && validPath ? `/labs/${encodeURIComponent(lab.subject.toLowerCase())}/${lab.path.split('/').map(encodeURIComponent).join('/')}` : null
+  const launchPath = lab?.path.replace(/\/sim\.html$/, '/index.html')
+  const source = lab && validPath && launchPath ? `/labs/${encodeURIComponent(lab.subject.toLowerCase())}/${launchPath.split('/').map(encodeURIComponent).join('/')}` : null
 
   if (!source) return <Box sx={{ minHeight: 340, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 3 }}><Typography color={failed ? 'error' : 'text.secondary'}>{failed ? 'Simulation labs could not be loaded.' : catalog ? 'This simulation lab is unavailable.' : 'Loading simulation lab...'}</Typography></Box>
-  return <Box sx={{ minHeight: 340, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1.5, p: 3, textAlign: 'center' }}><Typography variant="h6">{lab?.title}</Typography><Typography color="text.secondary">This simulation opens in a separate tab.</Typography><Button component="a" href={source} target="_blank" rel="noopener noreferrer" variant="contained">Open simulation</Button></Box>
+  return <Stack spacing={1.5} sx={{ width: '100%' }}><Button component="a" href={source} variant="outlined" sx={{ alignSelf: 'flex-start' }}>Open full lab page</Button><Box component="iframe" title={lab?.title ?? 'Simulation lab'} src={source} loading="lazy" sx={{ display: 'block', width: '100%', height: { xs: 560, md: 760 }, border: 0, backgroundColor: 'background.paper' }} /></Stack>
 }
 
 const PracticeLessonView: FC<{ questions: NonNullable<DashboardLesson['practiceQuestions']>; onAnswer: (questionId: number, answer: string) => void }> = ({ questions, onAnswer }) => {
