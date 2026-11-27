@@ -86,7 +86,7 @@ const fieldSx = {
 
 const pageFieldSx = {
   ...fieldSx,
-  '& .MuiOutlinedInput-root': { minHeight: 48, borderRadius: '4px', bgcolor: '#fff', '& fieldset': { borderColor: '#CFD6DA' }, '&:hover fieldset': { borderColor: '#6B7280' }, '&.Mui-focused': { boxShadow: 'none' }, '&.Mui-focused fieldset': { borderColor: primary, borderWidth: 2 } },
+  '& .MuiOutlinedInput-root': { minHeight: 48, borderRadius: '12px', bgcolor: '#fff', '& fieldset': { borderColor: '#CFD6DA' }, '&:hover fieldset': { borderColor: '#6B7280' }, '&.Mui-focused': { boxShadow: 'none' }, '&.Mui-focused fieldset': { borderColor: primary, borderWidth: 2 } },
   '& .MuiOutlinedInput-input': { py: 1.5, pl: 0, color: navy },
 } as const
 
