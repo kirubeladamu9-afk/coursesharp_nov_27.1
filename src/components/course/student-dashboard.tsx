@@ -1702,6 +1702,7 @@ const ProfileView: FC<{ onUpdateProfile: (profile: { name: string; email: string
 const PaymentHistoryView: FC<{ payments: MyPayment[]; isLoading: boolean; error: string | null }> = ({ payments, isLoading, error }) => <>
   <ViewHeading title="Payment History" description="Review course transactions linked to your account." />
   {isLoading ? <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress aria-label="Loading payments" /></Box> : error ? <Paper elevation={0} sx={{ p: 4, border: 1, borderColor: 'divider' }}><Typography color="error">{error}</Typography></Paper> : <Paper elevation={0} sx={{ border: 1, borderColor: 'divider', overflow: 'hidden' }}>
+    {payments.flatMap((payment) => (payment.updates ?? []).map((update, index) => <Alert key={`${payment.id}-${update.createdAt}-${index}`} severity={update.type === 'approved' ? 'success' : update.type === 'declined' ? 'error' : 'info'} sx={{ mb: 1.5 }}>{update.message}</Alert>))}
     <AdminDataTable rows={payments} columns={paymentColumns} searchPlaceholder="Search payments" searchKeys={['itemName', 'type', 'txRef']} />
   </Paper>}
 </>
@@ -2487,11 +2488,11 @@ const StudentDashboard: FC<StudentDashboardProps> = ({ darkMode, onToggleDarkMod
   const selectedCourseProgress = selectedCourse ? getCourseProgress(selectedCourse, completedLessons[selectedCourse.id] ?? []) : 0
   const unavailableCourseIds = new Set([
     ...enrollments.filter((enrollment) => enrollment.type === 'course').map((enrollment) => String(enrollment.item_id)),
-    ...payments.flatMap((payment) => payment.status === 'Pending Verification' && payment.courseId !== null ? [String(payment.courseId)] : []),
+    ...payments.flatMap((payment) => payment.status === 'Pending Verification' ? payment.items?.flatMap((item) => item.courseId === null ? [] : [String(item.courseId)]) ?? (payment.courseId === null ? [] : [String(payment.courseId)]) : []),
   ])
   const unavailableClassIds = new Set([
     ...enrollments.filter((enrollment) => enrollment.type === 'class').map((enrollment) => enrollment.item_id),
-    ...payments.flatMap((payment) => payment.status === 'Pending Verification' && payment.classId !== null ? [payment.classId] : []),
+    ...payments.flatMap((payment) => payment.status === 'Pending Verification' ? payment.items?.flatMap((item) => item.classId === null ? [] : [item.classId]) ?? (payment.classId === null ? [] : [payment.classId]) : []),
   ])
   const selectedCatalogClass = selectedCatalogClassId === null ? undefined : otherClasses.find((classRecord) => classRecord.id === selectedCatalogClassId)
   const selectedCatalogCourse = selectedCatalogCourseId === null ? undefined : otherCourses.find((course) => Number(course.id) === selectedCatalogCourseId)

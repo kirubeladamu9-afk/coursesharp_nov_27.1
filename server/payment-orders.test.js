@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest'
 import { enrollmentOrderVerificationKey, parseEnrollmentOrderItems } from './payment-orders.js'
 
 describe('payment order helpers', () => {

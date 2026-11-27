@@ -2,14 +2,10 @@ import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import CircularProgress from '@mui/material/CircularProgress'
-import Chip from '@mui/material/Chip'
 import Dialog from '@mui/material/Dialog'
 import DialogActions from '@mui/material/DialogActions'
 import DialogContent from '@mui/material/DialogContent'
 import DialogTitle from '@mui/material/DialogTitle'
-import FormControl from '@mui/material/FormControl'
-import InputLabel from '@mui/material/InputLabel'
-import MenuItem from '@mui/material/MenuItem'
 import IconButton from '@mui/material/IconButton'
 import InputAdornment from '@mui/material/InputAdornment'
 import Stack from '@mui/material/Stack'
@@ -42,7 +38,8 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
 import { type AdminCourse } from '@/components/admin/admin-data'
-import { getAuthenticatedUser, getCourses, getManualOrderInfo, getPublicClasses, saveAuthenticatedUser, sendEnrollmentOrderVerificationCode, submitManualOrder, verifyEnrollmentOrderEmail, type Course, type EnrollmentOrderTarget, type ManualOrderInfo, type PublicClass } from '@/services/api'
+import { type Course } from '@/interfaces/course'
+import { getAuthenticatedUser, getCourses, getManualOrderInfo, getPublicClasses, saveAuthenticatedUser, sendEnrollmentOrderVerificationCode, submitManualOrder, verifyEnrollmentOrderEmail, type EnrollmentOrderTarget, type ManualOrderInfo, type PublicClass } from '@/services/api'
 import { navigateTo } from '@/lib/navigation'
 
 interface EnrollmentModalProps {
@@ -433,7 +430,7 @@ const EnrollmentModal: FC<EnrollmentModalProps> = ({ course, classId = null, ope
 
   const renderConfirmation = () => <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, py: 4, textAlign: 'center' }} aria-live="polite">
     <Typography variant="h5" sx={{ fontWeight: 800, color: navy }}>Payment Pending Verification</Typography>
-    <Typography color="text.secondary">Your payment screenshot for {paymentInfo?.title ?? course.title} has been received and is under review. {isAuthenticated ? 'Check Payment History in your dashboard for updates.' : 'Sign in with your email and password to check Payment History.'} Course access will be available after approval.</Typography>
+    <Typography color="text.secondary">Your payment screenshot for {cartItems.map((item) => item.title).join(', ')} has been received and is under review. {isAuthenticated ? 'Check Payment History in your dashboard for updates.' : 'Sign in with your email and password to check Payment History.'} Access will be available after approval.</Typography>
     <Button size="large" onClick={() => navigateTo(isAuthenticated ? '/dashboard' : '/sign-in')} endIcon={<ArrowForwardIcon />} sx={{ ...primaryButtonSx, px: 4 }}>{isAuthenticated ? 'Go to Dashboard' : 'Sign in'}</Button>
   </Box>
 
@@ -441,18 +438,18 @@ const EnrollmentModal: FC<EnrollmentModalProps> = ({ course, classId = null, ope
     {paymentInfoError && <Alert severity="error">{paymentInfoError}</Alert>}
     {!paymentInfo && !paymentInfoError && <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress aria-label="Loading payment information" /></Box>}
     {paymentInfo && <>
-      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { sm: 'center' }, justifyContent: 'space-between', gap: 2, p: { xs: 2, sm: 2.5 }, border: 1, borderColor: '#CDE7E1', borderRadius: '16px', bgcolor: '#F2FAF8' }}>
-        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0 }}>
-          <Box sx={{ display: 'grid', placeItems: 'center', flexShrink: 0, width: 44, height: 44, borderRadius: '12px', color: primary, bgcolor: lavender }}><SchoolOutlinedIcon /></Box>
-          <Box sx={{ minWidth: 0 }}>
-            <Typography variant="caption" sx={{ color: primary, fontWeight: 700 }}>{classId === null ? 'COURSE ENROLLMENT' : 'CLASS ENROLLMENT'}</Typography>
-            <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.3, color: navy, overflowWrap: 'anywhere' }}>{paymentInfo.title}</Typography>
-          </Box>
+      <Box sx={{ p: { xs: 2, sm: 2.5 }, border: 1, borderColor: '#CDE7E1', borderRadius: '16px', bgcolor: '#F2FAF8' }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
+          <Box><Typography variant="h6" sx={{ fontWeight: 750, color: navy }}>Order items</Typography><Typography variant="body2" color="text.secondary">Prices are confirmed by the server.</Typography></Box>
+          <Button variant="outlined" startIcon={<AddIcon />} disabled={cartItems.length >= 10 || isSubmittingPayment} onClick={() => setCatalogOpen(true)} sx={{ borderRadius: 2, textTransform: 'none', color: primary, borderColor: primary }}>{cartItems.length >= 10 ? 'Cart full' : 'Add item'}</Button>
         </Stack>
-        <Box sx={{ flexShrink: 0, minWidth: { sm: 150 }, px: 2, py: 1.25, textAlign: { xs: 'left', sm: 'right' }, borderRadius: '14px', bgcolor: lavender }}>
-          <Typography variant="caption" color="text.secondary">Total amount</Typography>
-          <Typography variant="h5" sx={{ color: primary, fontWeight: 800, lineHeight: 1.2 }}>{paymentInfo.currency} {paymentInfo.amount.toFixed(2)}</Typography>
-        </Box>
+        <Stack spacing={1}>
+          {paymentInfo.items.map((item, index) => <Box key={`${item.courseId ?? 'course'}-${item.classId ?? 'class'}`} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, p: 1.25, bgcolor: '#fff', borderRadius: 2 }}>
+            <Box sx={{ minWidth: 0 }}><Typography sx={{ fontWeight: 650, color: navy, overflowWrap: 'anywhere' }}>{item.title}</Typography><Typography variant="caption" color="text.secondary">{item.classId === null ? 'Course' : 'Class'}</Typography></Box>
+            <Stack direction="row" spacing={1} alignItems="center"><Typography sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{paymentInfo.currency} {item.amount.toFixed(2)}</Typography><IconButton aria-label={`Remove ${item.title} from order`} disabled={cartItems.length <= 1 || isSubmittingPayment} onClick={() => removeCartItem(index)} size="small"><DeleteOutlineIcon /></IconButton></Stack>
+          </Box>)}
+        </Stack>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1.5, pt: 1.5, borderTop: 1, borderColor: '#CDE7E1' }}><Typography sx={{ fontWeight: 700 }}>Order total</Typography><Typography variant="h5" sx={{ color: primary, fontWeight: 800 }}>{paymentInfo.currency} {paymentInfo.amount.toFixed(2)}</Typography></Box>
       </Box>
 
       <Box>
@@ -489,7 +486,7 @@ const EnrollmentModal: FC<EnrollmentModalProps> = ({ course, classId = null, ope
             </Stack>
             {copyFeedback && <Typography variant="caption" role="status" sx={{ display: 'block', mt: 0.75, color: copyFeedback.startsWith('Copy failed') ? 'error.main' : '#047857' }}>{copyFeedback}</Typography>}
             <Alert icon={<InfoOutlinedIcon />} severity="info" sx={{ mt: 1.5, borderRadius: '14px', bgcolor: lavender, color: navy, '& .MuiAlert-icon': { color: primary } }}>
-              Please include the exact amount ({paymentInfo.currency} {paymentInfo.amount.toFixed(2)}) when paying.
+              Please include the exact order total ({paymentInfo.currency} {paymentInfo.amount.toFixed(2)}) when paying.
             </Alert>
             {paymentInfo.instructions && <Typography variant="body2" color="text.secondary" sx={{ mt: 1.25 }}>{paymentInfo.instructions}</Typography>}
           </Box>
@@ -526,7 +523,8 @@ const EnrollmentModal: FC<EnrollmentModalProps> = ({ course, classId = null, ope
     </>}
   </Stack>
 
-  return <Dialog open={open} onClose={onClose} fullScreen={isMobile} maxWidth={false} aria-labelledby="enrollment-dialog-title" PaperProps={{ sx: { width: '100%', maxWidth: { sm: 960 }, m: { xs: 0, sm: 2 }, borderRadius: { xs: 0, sm: '24px' }, overflow: 'hidden', backgroundImage: 'none', boxShadow: '0 24px 64px rgba(23, 23, 43, 0.14)', maxHeight: { sm: 'min(92vh, 960px)' } } }}>
+  return <>
+  <Dialog open={open} onClose={onClose} fullScreen={isMobile} maxWidth={false} aria-labelledby="enrollment-dialog-title" PaperProps={{ sx: { width: '100%', maxWidth: { sm: 960 }, m: { xs: 0, sm: 2 }, borderRadius: { xs: 0, sm: '24px' }, overflow: 'hidden', backgroundImage: 'none', boxShadow: '0 24px 64px rgba(23, 23, 43, 0.14)', maxHeight: { sm: 'min(92vh, 960px)' } } }}>
     <DialogTitle id="enrollment-dialog-title" component="div" sx={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 1.5, pt: { xs: 4, sm: 4.5 }, pb: 0, px: { xs: 2.5, sm: 4 } }}>
       <IconButton aria-label="Close enrollment" onClick={onClose} sx={{ position: 'absolute', top: 16, right: 16, width: 40, height: 40, borderRadius: '12px', color: muted, bgcolor: '#F2F6F5', '&:hover': { color: primary, bgcolor: lavender } }}><CloseIcon /></IconButton>
       <Box sx={{ display: 'grid', placeItems: 'center', width: 96, height: 96, borderRadius: '50%', bgcolor: 'rgba(18, 124, 113, 0.10)' }}>
@@ -544,6 +542,20 @@ const EnrollmentModal: FC<EnrollmentModalProps> = ({ course, classId = null, ope
       {submitted ? renderConfirmation() : activeStep === 0 ? renderPersonalInfo() : activeStep === 1 ? renderVerifyEmail() : renderPaymentInfo()}
     </DialogContent>
   </Dialog>
+  <Dialog open={catalogOpen} onClose={() => setCatalogOpen(false)} fullWidth maxWidth="sm" aria-labelledby="catalog-picker-title">
+    <DialogTitle id="catalog-picker-title">Add to your order</DialogTitle>
+    <DialogContent dividers>
+      <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+        <Button variant={catalogTab === 'courses' ? 'contained' : 'outlined'} onClick={() => setCatalogTab('courses')}>Courses</Button>
+        <Button variant={catalogTab === 'classes' ? 'contained' : 'outlined'} onClick={() => setCatalogTab('classes')}>Classes</Button>
+      </Stack>
+      {catalogError && <Alert severity="error" sx={{ mb: 2 }}>{catalogError}</Alert>}
+      {catalogTab === 'courses' ? <Stack spacing={1}>{availableCourses.map((item) => <Button key={item.id} onClick={() => { addCourseToCart(item); setCatalogOpen(false) }} disabled={cartItems.length >= 10} sx={{ justifyContent: 'space-between', textAlign: 'left', py: 1.25 }}><span>{item.title}</span><AddIcon /></Button>)}</Stack> : <Stack spacing={1}>{availableClasses.map((item) => <Button key={item.id} onClick={() => { addClassToCart(item); setCatalogOpen(false) }} disabled={cartItems.length >= 10} sx={{ justifyContent: 'space-between', textAlign: 'left', py: 1.25 }}><span>{item.title}</span><AddIcon /></Button>)}</Stack>}
+      {!catalogError && (catalogTab === 'courses' ? availableCourses.length === 0 : availableClasses.length === 0) && <Typography color="text.secondary">No additional {catalogTab} are available to add.</Typography>}
+    </DialogContent>
+    <DialogActions><Button onClick={() => setCatalogOpen(false)}>Close</Button></DialogActions>
+  </Dialog>
+  </>
 }
 
 export default EnrollmentModal

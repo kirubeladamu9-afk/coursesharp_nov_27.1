@@ -638,7 +638,8 @@ const initializeDatabase = async () => {
     class_status: "TEXT CHECK (class_status IN ('enrolled', 'waitlisted'))",
   })
   await ensureNullable('enrollments', 'course_id')
-  await sql`CREATE UNIQUE INDEX IF NOT EXISTS enrollments_class_payment_idx ON enrollments (student_id, payment_id) WHERE course_id IS NULL`
+  await sql`DROP INDEX IF EXISTS enrollments_class_payment_idx`
+  await sql`CREATE UNIQUE INDEX enrollments_class_payment_idx ON enrollments (student_id, payment_id, class_id) WHERE course_id IS NULL AND class_id IS NOT NULL AND payment_id IS NOT NULL`
   await ensureColumns('payments', {
     class_id: 'BIGINT REFERENCES classes(id) ON DELETE SET NULL',
   })
@@ -649,8 +650,8 @@ const initializeDatabase = async () => {
     CREATE TABLE IF NOT EXISTS payment_order_items (
       id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
       payment_id BIGINT NOT NULL REFERENCES payments(id) ON DELETE CASCADE,
-      course_id BIGINT REFERENCES courses(id) ON DELETE RESTRICT,
-      class_id BIGINT REFERENCES classes(id) ON DELETE RESTRICT,
+      course_id BIGINT,
+      class_id BIGINT,
       title TEXT NOT NULL,
       amount NUMERIC(10, 2) NOT NULL CHECK (amount >= 0),
       removed_at TIMESTAMPTZ,
@@ -3924,7 +3925,6 @@ app.post('/api/enrollment/verify-code', async (request, response) => {
   const code = typeof request.body?.code === 'string' ? request.body.code.trim() : ''
   if (!/^\d{6}$/.test(code)) return response.status(400).json({ message: 'Enter the 6-digit code from your email.' })
 
-  const targetKey = enrollmentTargetKey(courseId, classId)
   const outcome = await sql.begin(async (transaction) => {
     const [record] = await transaction`
       SELECT id, code_hash AS "codeHash", attempts, code_expires_at <= NOW() AS expired
@@ -4450,7 +4450,7 @@ app.get('/api/payments', requireAuthenticated, async (request, response) => {
              WHEN payments.bookstore_item_id IS NOT NULL THEN 'book'
              WHEN payments.practice_exam_id IS NOT NULL THEN 'practice_exam'
              WHEN (SELECT COUNT(*) FROM payment_order_items order_items WHERE order_items.payment_id = payments.id AND order_items.removed_at IS NULL) > 1 THEN 'order'
-             WHEN payments.class_id IS NOT NULL THEN 'class'
+             WHEN COALESCE(payments.class_id, (SELECT order_items.class_id FROM payment_order_items order_items WHERE order_items.payment_id = payments.id AND order_items.removed_at IS NULL ORDER BY order_items.id LIMIT 1)) IS NOT NULL THEN 'class'
              ELSE 'course'
            END AS type,
            COALESCE((SELECT jsonb_agg(jsonb_build_object('courseId', order_items.course_id::INTEGER, 'classId', order_items.class_id::INTEGER, 'title', order_items.title, 'amount', order_items.amount::FLOAT) ORDER BY order_items.id) FROM payment_order_items order_items WHERE order_items.payment_id = payments.id AND order_items.removed_at IS NULL), '[]'::jsonb) AS items,
@@ -6154,7 +6154,7 @@ app.get('/api/admin/payments', requireAdmin, async (_request, response) => {
              WHEN payments.bookstore_item_id IS NOT NULL OR payments.reference LIKE 'book-%' OR payments.reference LIKE 'test-book-%' THEN 'Book'
              WHEN payments.practice_exam_id IS NOT NULL THEN 'Practice exam'
              WHEN (SELECT COUNT(*) FROM payment_order_items order_items WHERE order_items.payment_id = payments.id AND order_items.removed_at IS NULL) > 1 THEN 'Order'
-             WHEN payments.class_id IS NOT NULL THEN 'Class'
+             WHEN COALESCE(payments.class_id, (SELECT order_items.class_id FROM payment_order_items order_items WHERE order_items.payment_id = payments.id AND order_items.removed_at IS NULL ORDER BY order_items.id LIMIT 1)) IS NOT NULL THEN 'Class'
              ELSE 'Course'
            END AS type,
            payments.amount::FLOAT AS amount,

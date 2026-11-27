@@ -630,7 +630,7 @@ export interface AdminPayment {
   id: number
   student: string
   course: string
-  type: 'Course' | 'Class' | 'Book' | 'Practice exam' | 'Sponsor'
+  type: 'Course' | 'Class' | 'Order' | 'Book' | 'Practice exam' | 'Sponsor'
   amount: number
   currency: string
   date: string
@@ -694,7 +694,7 @@ export interface AdminRegistration {
 export interface MyPayment {
   id: number
   itemName: string
-  type: 'course' | 'class' | 'book' | 'practice_exam'
+  type: 'course' | 'class' | 'order' | 'book' | 'practice_exam'
   amount: number
   currency: string
   status: 'Paid' | 'Pending' | 'Pending Verification' | 'Declined' | 'Failed'

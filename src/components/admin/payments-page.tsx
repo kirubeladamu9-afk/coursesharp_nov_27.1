@@ -19,7 +19,7 @@ import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { type FC, useEffect, useMemo, useState } from 'react'
 import AdminDataTable, { type DataColumn } from './admin-data-table'
-import { getAdminPayments, getAdminSponsorPayments, getPendingManualPayments, reviewManualPayment, type AdminPayment, type PendingManualPayment } from '@/services/api'
+import { getAdminPayments, getAdminSponsorPayments, getPendingManualPayments, removeManualOrderItem, reviewManualPayment, type AdminPayment, type PendingManualPayment } from '@/services/api'
 
 const statusColor = (status: string): 'success' | 'warning' | 'error' | 'info' | 'default' => {
   if (['Published', 'Approved', 'Active', 'Paid'].includes(status)) return 'success'
@@ -30,7 +30,7 @@ const statusColor = (status: string): 'success' | 'warning' | 'error' | 'info' |
 
 const StatusChip: FC<{ status: string }> = ({ status }) => <Chip label={status} color={statusColor(status)} size="small" />
 
-type PaymentTypeFilter = 'All' | 'Course' | 'Class' | 'Book' | 'Sponsor'
+type PaymentTypeFilter = 'All' | 'Course' | 'Class' | 'Order' | 'Book' | 'Sponsor'
 type HistoryRow = Omit<AdminPayment, 'id'> & { id: string }
 
 const PageHeading: FC<{ title: string; description: string }> = ({ title, description }) => (
@@ -51,6 +51,7 @@ const PaymentsPage: FC = () => {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [queueError, setQueueError] = useState<string | null>(null)
   const [reviewingId, setReviewingId] = useState<number | null>(null)
+  const [removingItemId, setRemovingItemId] = useState<number | null>(null)
   const [proofPayment, setProofPayment] = useState<PendingManualPayment | null>(null)
   const [decliningPayment, setDecliningPayment] = useState<PendingManualPayment | null>(null)
   const [declineReason, setDeclineReason] = useState('')
@@ -108,6 +109,20 @@ const PaymentsPage: FC = () => {
     { key: 'reviewNote', label: 'Review note' },
   ]
 
+  const handleRemoveOrderItem = async (payment: PendingManualPayment, itemId: number) => {
+    setRemovingItemId(itemId)
+    setActionError(null)
+    try {
+      await removeManualOrderItem(payment.id, itemId, 'Unavailable item removed by administrator')
+      await loadQueue()
+      void loadPayments()
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : 'Unable to remove this order item.')
+    } finally {
+      setRemovingItemId(null)
+    }
+  }
+
   const handleReview = async (payment: PendingManualPayment, decision: 'approve' | 'decline', reason = '') => {
     setReviewingId(payment.id)
     setActionError(null)
@@ -134,7 +149,7 @@ const PaymentsPage: FC = () => {
           <Stack spacing={2}>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' }, gap: 1.5 }}>
               <Box><Typography variant="caption" color="text.secondary">Student</Typography><Typography sx={{ fontWeight: 700 }}>{payment.student}</Typography><Typography variant="body2" color="text.secondary">{payment.email} · {payment.phone || 'No phone provided'}</Typography></Box>
-              <Box><Typography variant="caption" color="text.secondary">Course / class</Typography><Typography sx={{ fontWeight: 700 }}>{payment.course}</Typography></Box>
+              <Box><Typography variant="caption" color="text.secondary">Order items</Typography><Stack spacing={0.75} sx={{ mt: 0.5 }}>{payment.items.map((item) => <Box key={item.id ?? `${item.courseId}-${item.classId}`} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1 }}><Typography variant="body2" sx={{ fontWeight: 600 }}>{item.title} · {payment.currency} {item.amount.toFixed(2)}</Typography>{payment.items.length > 1 && item.id !== undefined && <Button size="small" color="error" disabled={removingItemId === item.id || reviewingId === payment.id} onClick={() => void handleRemoveOrderItem(payment, item.id!)}>{removingItemId === item.id ? 'Removing...' : 'Remove unavailable'}</Button>}</Box>)}</Stack></Box>
               <Box><Typography variant="caption" color="text.secondary">Amount due</Typography><Typography sx={{ fontWeight: 700 }}>{payment.currency} {payment.amount.toFixed(2)}</Typography></Box>
               <Box><Typography variant="caption" color="text.secondary">Submitted</Typography><Typography>{new Date(payment.submittedAt).toLocaleString()}</Typography></Box>
             </Box>
@@ -151,7 +166,7 @@ const PaymentsPage: FC = () => {
 
     <Typography variant="h5" sx={{ mb: 2 }}>Payment history</Typography>
     {isLoading ? <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress aria-label="Loading payments" /></Box> : loadError ? <Paper elevation={0} sx={{ p: 4, border: 1, borderColor: 'divider' }}><Typography color="error">{loadError}</Typography></Paper> : <>
-      <FormControl size="small" sx={{ minWidth: 170, mb: 2 }}><InputLabel>Payment type</InputLabel><Select label="Payment type" value={paymentType} onChange={(event) => setPaymentType(event.target.value as PaymentTypeFilter)}><MenuItem value="All">All payment types</MenuItem><MenuItem value="Course">Course</MenuItem><MenuItem value="Class">Class</MenuItem><MenuItem value="Book">Book</MenuItem><MenuItem value="Sponsor">Sponsor</MenuItem></Select></FormControl>
+      <FormControl size="small" sx={{ minWidth: 170, mb: 2 }}><InputLabel>Payment type</InputLabel><Select label="Payment type" value={paymentType} onChange={(event) => setPaymentType(event.target.value as PaymentTypeFilter)}><MenuItem value="All">All payment types</MenuItem><MenuItem value="Course">Course</MenuItem><MenuItem value="Class">Class</MenuItem><MenuItem value="Order">Order</MenuItem><MenuItem value="Book">Book</MenuItem><MenuItem value="Sponsor">Sponsor</MenuItem></Select></FormControl>
       <AdminDataTable key={paymentType} rows={filteredPayments} columns={columns} searchPlaceholder="Search payments" />
     </>}
 
