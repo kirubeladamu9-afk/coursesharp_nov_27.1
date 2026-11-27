@@ -24,7 +24,10 @@ const CourseCartPage: React.FC<Props> = ({ darkMode, onToggleDarkMode }) => {
 
   useEffect(() => {
     let active = true
-    Promise.all([getCourses(), loadCourseCartIds()]).then(([catalog, ids]) => {
+    Promise.all([getCourses(), loadCourseCartIds().catch((reason) => {
+      if (active) setError(reason instanceof Error ? reason.message : 'Your cart could not be synced.')
+      return getCourseCartIds()
+    })]).then(([catalog, ids]) => {
       if (!active) return
       setCourses(catalog)
       setCartIds(ids)

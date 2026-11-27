@@ -581,7 +581,7 @@ export const loadCourseCartIds = async (): Promise<number[]> => {
   const response = await requestApi('/api/cart/courses')
   if (!response.ok) throw new Error(await getErrorMessage(response))
   const remote = await response.json() as { courseIds: number[] }
-  const merged = [...new Set([...remote.courseIds, ...localIds])]
+  const merged = [...new Set([...remote.courseIds, ...localIds])].slice(0, 10)
   if (merged.length !== remote.courseIds.length) await saveRemoteCourseCart(merged)
   writeCourseCartIds(merged)
   return merged
