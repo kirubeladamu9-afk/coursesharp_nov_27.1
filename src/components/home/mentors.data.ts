@@ -21,7 +21,7 @@ export const data: Array<Mentor> = [
     description:
       'Plans content and outreach strategies that help students discover CourseSharp and stay engaged',
     company: {
-      name: '7 yrs',
+      name: '2 yrs',
       logo: '/images/companies/google.png',
     },
   },
