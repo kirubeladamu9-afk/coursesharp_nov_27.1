@@ -14,6 +14,8 @@ import Tabs from '@mui/material/Tabs'
 import Typography from '@mui/material/Typography'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined'
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined'
+import SimulationLabViewer from '@/components/stem-lab/simulation-lab-viewer'
 import { type FC, useEffect, useMemo, useState } from 'react'
 import { type AdminLesson } from './admin-data'
 import { STEM_TOOL_LIBRARY, type StemToolDefinition } from '@/components/stem-lab/stem-tool-library'
@@ -143,6 +145,7 @@ const SimulationLabsPicker: FC<PlatformEngineLessonPickerProps> = ({ lesson, onS
   const [search, setSearch] = useState('')
   const [subject, setSubject] = useState('All')
   const [grade, setGrade] = useState('All')
+  const [selectedLabId, setSelectedLabId] = useState(lesson.simulationLab ? lesson.simulationToolId : undefined)
   const hasClassGrade = typeof classGrade === 'number' && Number.isFinite(classGrade)
   const needsGrade = restrictToClassGrade && !hasClassGrade
   const existingLabId = lesson.simulationLab ? lesson.simulationToolId : undefined
@@ -169,24 +172,19 @@ const SimulationLabsPicker: FC<PlatformEngineLessonPickerProps> = ({ lesson, onS
       && (grade === 'All' || gradeDistance(lab, Number(grade)) === 0)
       && `${lab.title} ${lab.subject} ${lab.gradeBand}`.toLowerCase().includes(search.trim().toLowerCase()))
     .sort((a, b) => (hasClassGrade ? gradeDistance(a.lab, classGrade) - gradeDistance(b.lab, classGrade) : 0) || a.index - b.index)
-  const existingLab = labs.find((lab) => lab.id === existingLabId)
-  const canSaveExisting = !!existingLabId && !!lesson.title.trim() && (!restrictToClassGrade || (hasClassGrade && status === 'ready' && !!existingLab && gradeDistance(existingLab, classGrade) === 0))
+  const selectedLab = labs.find((lab) => lab.id === selectedLabId)
+  const canSaveSelected = !!selectedLab && !!lesson.title.trim() && (!restrictToClassGrade || (hasClassGrade && gradeDistance(selectedLab, classGrade) === 0))
 
-  const selectLab = (lab: SimulationLab) => {
-    onSave({ ...lesson, title: lab.title, simulationLab: true, simulationToolId: lab.id, curriculumTopic: undefined, platformEngineId: undefined, simulation: undefined })
-  }
-  const saveExistingLab = () => {
-    if (!canSaveExisting) return
-    onSave({ ...lesson, simulationLab: true, curriculumTopic: undefined, platformEngineId: undefined, simulation: undefined })
+  const saveSelectedLab = () => {
+    if (!canSaveSelected || !selectedLab) return
+    onSave({ ...lesson, title: lesson.title.startsWith('New ') ? selectedLab.title : lesson.title, simulationLab: true, simulationToolId: selectedLab.id, curriculumTopic: undefined, platformEngineId: undefined, simulation: undefined })
   }
 
   return <Stack spacing={1.5}>
-    <Box><Typography variant="subtitle1" sx={{ fontWeight: 700 }}>Choose a simulation lab</Typography><Typography variant="body2" color="text.secondary">Select a lab to add it to the course draft.</Typography></Box>
-    {existingLabId && !needsGrade && <Paper variant="outlined" sx={{ p: 2 }}><Stack spacing={1}>
-      <Typography variant="subtitle2">Current lab: {existingLab?.title ?? existingLabId}</Typography>
-      <Typography variant="body2" color="text.secondary">Save the current lesson title, or choose another lab below.</Typography>
-      {restrictToClassGrade && status === 'ready' && !canSaveExisting && !!lesson.title.trim() && <Typography variant="body2" color="text.secondary">The current lab is not available for this class grade. Choose another lab.</Typography>}
-      <Button variant="outlined" startIcon={<SaveOutlinedIcon />} onClick={saveExistingLab} disabled={!canSaveExisting} sx={{ alignSelf: 'flex-start' }}>Save lesson title</Button>
+    <Box><Typography variant="subtitle1" sx={{ fontWeight: 700 }}>Choose a simulation lab</Typography><Typography variant="body2" color="text.secondary">Preview a lab before saving it as a lesson.</Typography></Box>
+    {selectedLab && <Paper variant="outlined" sx={{ p: 2 }}><Stack spacing={1.5}>
+      <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} justifyContent="space-between" spacing={1}><Box><Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{selectedLab.title}</Typography><Typography variant="body2" color="text.secondary">{selectedLab.subject} · {selectedLab.gradeBand}</Typography></Box><Stack direction="row" spacing={1}><Button variant="text" onClick={() => setSelectedLabId(undefined)}>Back to simulation labs</Button><Button variant="contained" startIcon={<SaveOutlinedIcon />} onClick={saveSelectedLab} disabled={!canSaveSelected}>Save topic as lesson</Button></Stack></Stack>
+      <SimulationLabViewer key={selectedLab.id} labId={selectedLab.id} />
     </Stack></Paper>}
     {needsGrade ? <Typography color="text.secondary">A class grade is required to show simulation labs for this class.</Typography> : <>
       <Stack direction={{ xs: 'column', lg: 'row' }} spacing={1.25}>
@@ -197,9 +195,7 @@ const SimulationLabsPicker: FC<PlatformEngineLessonPickerProps> = ({ lesson, onS
       {status === 'loading' && <Typography role="status" color="text.secondary">Loading simulation labs...</Typography>}
       {status === 'error' && <Stack spacing={1} alignItems="flex-start"><Typography role="alert" color="error">Could not load simulation labs.</Typography><Button onClick={() => setRetry((value) => value + 1)}>Try again</Button></Stack>}
       {status === 'ready' && (filteredLabs.length ? <Grid container spacing={1.25}>{filteredLabs.map(({ lab }) => <Grid item xs={12} sm={6} key={lab.id}>
-        <Box component="button" type="button" onClick={() => selectLab(lab)} sx={{ width: '100%', minHeight: 100, p: 1.5, textAlign: 'left', border: 1, borderColor: 'divider', borderRadius: 2, backgroundColor: 'background.paper', color: 'text.primary', cursor: 'pointer', font: 'inherit', '&:hover': { borderColor: 'primary.main', backgroundColor: 'action.hover' } }}>
-          <Stack spacing={1}><Typography sx={{ fontWeight: 700 }}>{lab.title}</Typography><Stack direction="row" spacing={.75} flexWrap="wrap"><Chip size="small" label={lab.subject} /><Chip size="small" label={lab.gradeBand} variant="outlined" /></Stack></Stack>
-        </Box>
+        <Paper elevation={0} sx={{ p: 1.5, border: 1, borderColor: selectedLabId === lab.id ? 'primary.main' : 'divider', borderRadius: 2 }}><Stack spacing={1}><Stack direction="row" justifyContent="space-between" spacing={1}><Typography sx={{ fontWeight: 700 }}>{lab.title}</Typography><Stack direction="row" spacing={.75}><Chip size="small" label={lab.subject} /><Chip size="small" label={lab.gradeBand} variant="outlined" /></Stack></Stack><Button variant={selectedLabId === lab.id ? 'contained' : 'outlined'} size="small" startIcon={<VisibilityOutlinedIcon />} onClick={() => setSelectedLabId(lab.id)} sx={{ alignSelf: 'flex-start' }}>{selectedLabId === lab.id ? 'Previewing' : 'Preview'}</Button></Stack></Paper>
       </Grid>)}</Grid> : <Typography color="text.secondary" sx={{ py: 2 }}>No simulation labs match these filters.</Typography>)}
     </>}
   </Stack>
