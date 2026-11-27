@@ -4119,6 +4119,7 @@ app.post('/api/enrollment/manual-order', async (request, response) => {
           FOR UPDATE
         `
         if (!verification) return { error: 'Verify your email for this exact order before submitting payment.', status: 403 }
+        await transaction`DELETE FROM enrollment_email_verifications WHERE id = ${verification.id}`
       }
 
       const [user] = authenticated ? await transaction`
@@ -4198,7 +4199,6 @@ app.post('/api/enrollment/manual-order', async (request, response) => {
       for (const item of pricedItems) {
         await transaction`INSERT INTO payment_order_items ${transaction({ payment_id: payment.id, course_id: item.courseId, class_id: item.classId, title: item.title, amount: item.amount })}`
       }
-      await transaction`DELETE FROM enrollment_email_verifications WHERE id = ${verification.id}`
       return { id: payment.id, amount: amountCents / 100, items: pricedItems, user }
     })
   } catch (error) {
