@@ -55,7 +55,7 @@ const CourseReviews: FC<CourseReviewsProps> = ({ courseId, rating, ratingCount }
   })
 
   return <Box id="course-reviews" sx={{ pt: 1 }}>
-    <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2.5, bgcolor: '#fff', borderRadius: '12px', px: 2.5, py: 2 }}>
+    <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2.5, bgcolor: (theme) => theme.palette.mode === 'dark' ? theme.palette.background.paper : '#fff', borderRadius: '12px', px: 2.5, py: 2 }}>
       <Typography component="h2" sx={{ fontSize: 22, fontWeight: 700 }}>Review</Typography>
       <Typography sx={{ fontSize: 14, fontWeight: 700 }}><Box component="span" sx={{ color: '#f6c64f', mr: 0.75 }}>★</Box>{averageRating.toFixed(1)} Rating <Box component="span" sx={{ color: '#9297a2', fontWeight: 400, fontSize: 12 }}>({totalRatings.toLocaleString()})</Box></Typography>
     </Stack>
