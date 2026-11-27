@@ -6,6 +6,7 @@ import Typography from '@mui/material/Typography'
 import { Link as ScrollLink } from 'react-scroll'
 import { StyledButton } from '@/components/styled-button'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
+import { useTheme } from '@mui/material/styles'
 
 interface Exp {
   label: string
@@ -87,6 +88,8 @@ const ExpItem: FC<ExpItemProps> = ({ item }) => {
 }
 
 const HomeHero: FC = () => {
+  const theme = useTheme()
+
   return (
     <Box id="hero" sx={{ backgroundColor: 'background.paper', backgroundImage: 'radial-gradient(ellipse 65% 48% at 50% 36%, rgba(18, 124, 113, 0.055) 0%, transparent 100%), radial-gradient(ellipse 90% 65% at 50% 70%, rgba(18, 124, 113, 0.10) 0%, rgba(18, 124, 113, 0.035) 55%, transparent 100%)', position: 'relative', pt: { xs: 6, md: 8 }, pb: { xs: 8, md: 10 } }}>
       <Container maxWidth="lg">
@@ -189,7 +192,7 @@ const HomeHero: FC = () => {
                   </StyledButton>
                 </ScrollLink>
                 <ScrollLink to="video-section" spy={true} smooth={true} offset={0} duration={350}>
-                  <StyledButton borderRadius={999} color="primary" size="large" variant="outlined" startIcon={<PlayArrowIcon />}>
+                  <StyledButton borderRadius={999} color={theme.palette.mode === 'dark' ? 'light' : 'primary'} size="large" variant="outlined" startIcon={<PlayArrowIcon />}>
                     Watch Video
                   </StyledButton>
                 </ScrollLink>
