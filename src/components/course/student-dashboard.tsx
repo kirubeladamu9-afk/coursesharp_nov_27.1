@@ -2138,6 +2138,14 @@ const SimulationLabViewer: FC<{ labId?: string }> = ({ labId }) => {
   const [catalog, setCatalog] = useState<CatalogLab[] | null>(null)
   const [html, setHtml] = useState<string | null>(null)
   const [failed, setFailed] = useState(false)
+  const [fullScreen, setFullScreen] = useState(false)
+
+  useEffect(() => {
+    if (!fullScreen) return
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') setFullScreen(false) }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [fullScreen])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -2175,7 +2183,7 @@ const SimulationLabViewer: FC<{ labId?: string }> = ({ labId }) => {
 
   if (!source || failed) return <Box sx={{ minHeight: 340, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 3 }}><Typography color={failed ? 'error' : 'text.secondary'}>{failed ? 'Simulation lab could not be loaded.' : catalog ? 'This simulation lab is unavailable.' : 'Loading simulation lab...'}</Typography></Box>
   if (!html) return <Box sx={{ minHeight: 340, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 3 }}><Typography role="status" color="text.secondary">Loading simulation lab...</Typography></Box>
-  return <Box component="iframe" title={lab?.title ?? 'Simulation lab'} srcDoc={html} sandbox="allow-scripts allow-forms allow-pointer-lock allow-modals" allow="fullscreen; pointer-lock" sx={{ display: 'block', width: '100%', height: { xs: 560, md: 760 }, border: 0, backgroundColor: 'background.paper' }} />
+  return <Box sx={fullScreen ? { position: 'fixed', inset: 0, zIndex: 'modal', display: 'flex', flexDirection: 'column', p: 1, backgroundColor: 'background.default' } : { width: '100%' }}><Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}><Button variant="outlined" startIcon={fullScreen ? <FullscreenExitOutlinedIcon /> : <FullscreenOutlinedIcon />} aria-pressed={fullScreen} onClick={() => setFullScreen((current) => !current)}>{fullScreen ? 'Exit full screen' : 'Full screen'}</Button></Box><Box component="iframe" title={lab?.title ?? 'Simulation lab'} srcDoc={html} sandbox="allow-scripts allow-forms allow-pointer-lock allow-modals" allow="fullscreen; pointer-lock" sx={{ display: 'block', width: '100%', height: fullScreen ? '100%' : { xs: 560, md: 760 }, flex: fullScreen ? 1 : undefined, minHeight: fullScreen ? 0 : undefined, border: 0, backgroundColor: 'background.paper' }} /></Box>
 }
 
 const PracticeLessonView: FC<{ questions: NonNullable<DashboardLesson['practiceQuestions']>; onAnswer: (questionId: number, answer: string) => void }> = ({ questions, onAnswer }) => {
