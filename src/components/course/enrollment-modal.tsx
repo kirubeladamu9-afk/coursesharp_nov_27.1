@@ -595,7 +595,7 @@ const EnrollmentModal: FC<EnrollmentModalProps> = ({ variant = 'dialog', course,
 
   const renderPageSummary = () => <aside aria-label="Order summary" className="h-fit rounded-3xl bg-[#f5f7fa] px-5 pb-6 pt-5 sm:px-7 sm:pb-8 sm:pt-7">
     <span className="text-xs font-bold leading-5 tracking-[0.08em] text-[#127C71]">ORDER SUMMARY</span>
-    <h2 className="mt-1 text-2xl font-bold leading-[1.25] tracking-[-0.04em] text-slate-950">Your cart</h2>
+    <h2 className="mt-1 text-xl font-bold leading-[1.25] tracking-[-0.04em] text-slate-950">Your cart</h2>
     <ul className="mt-6 divide-y divide-slate-200">
       {cartItems.map((item) => {
         const amount = priceFor(item.target)?.amount
