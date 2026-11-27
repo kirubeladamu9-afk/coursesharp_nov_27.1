@@ -50,7 +50,10 @@ const CartDropdown: FC<{ onNavigate?: () => void }> = ({ onNavigate }) => {
                 ))}
               </ul>
               <div className="border-t border-[var(--app-border)] p-4">
-                <p className="m-0 mb-3 text-lg font-extrabold">Total: ${total.toFixed(2)}</p>
+                <div className="mb-3 space-y-1">
+                  <p className="m-0 flex justify-between text-sm text-[var(--app-text-muted)]"><span>Subtotal</span><span>${total.toFixed(2)}</span></p>
+                  <p className="m-0 flex justify-between text-base font-bold"><span>Total</span><span>${total.toFixed(2)}</span></p>
+                </div>
                 <button type="button" onClick={go} className="w-full cursor-pointer rounded-xl border-0 bg-[#127C71] py-3 text-sm font-bold text-white transition hover:bg-[#0D6A69]">Go to cart</button>
               </div>
             </>
