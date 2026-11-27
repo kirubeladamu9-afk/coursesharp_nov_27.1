@@ -86,7 +86,7 @@ const Header: FC<Props> = ({ darkMode, showSocialLinks = false, onToggleDarkMode
               </Box>}
               <Tooltip title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}>
                 <IconButton onClick={onToggleDarkMode} aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'} sx={iconButtonSx}>
-                  {darkMode ? <LightModeOutlined /> : <DarkModeOutlined />}
+                  {darkMode ? <LightModeOutlined sx={{ color: '#fff' }} /> : <DarkModeOutlined />}
                 </IconButton>
               </Tooltip>
               <AuthNavigation isAdmin={isAdmin} isTutor={isTutor} isStudent={isStudent} darkMode={darkMode} onSignIn={withCloseMenu(() => navigateTo('/sign-in'))} onAdminDashboard={withCloseMenu(() => navigateTo('/admin'))} onTutorDashboard={withCloseMenu(() => navigateTo('/tutor'))} onStudentDashboard={withCloseMenu(() => navigateTo('/dashboard'))} onSignOut={withCloseMenu(() => { void signOut().then(() => { toast.add({ title: 'Signed out', description: 'You have been successfully logged out.', type: 'success' }); navigateTo('/', true) }) })} />
