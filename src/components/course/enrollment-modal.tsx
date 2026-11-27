@@ -19,7 +19,6 @@ import AccountBalanceOutlinedIcon from '@mui/icons-material/AccountBalanceOutlin
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import CheckOutlinedIcon from '@mui/icons-material/CheckOutlined'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
-import SchoolOutlinedIcon from '@mui/icons-material/SchoolOutlined'
 import CloseIcon from '@mui/icons-material/Close'
 import CloudUploadOutlinedIcon from '@mui/icons-material/CloudUploadOutlined'
 import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined'
@@ -84,6 +83,25 @@ const fieldSx = {
   '& .MuiOutlinedInput-input': { py: 2, pl: 0, color: navy },
   '& .MuiInputAdornment-root': { mr: 1.25, color: muted },
   '& .MuiInputAdornment-root .MuiSvgIcon-root': { fontSize: 20 },
+} as const
+
+const pageFieldSx = {
+  ...fieldSx,
+  '& .MuiOutlinedInput-root': { minHeight: 48, borderRadius: '4px', bgcolor: '#fff', '& fieldset': { borderColor: '#CFD6DA' }, '&:hover fieldset': { borderColor: '#6B7280' }, '&.Mui-focused': { boxShadow: 'none' }, '&.Mui-focused fieldset': { borderColor: primary, borderWidth: 2 } },
+  '& .MuiOutlinedInput-input': { py: 1.5, pl: 0, color: navy },
+} as const
+
+const pageButtonSx = {
+  height: 48,
+  borderRadius: '4px',
+  fontWeight: 700,
+  fontSize: 15,
+  textTransform: 'none',
+  color: '#fff',
+  bgcolor: primary,
+  boxShadow: 'none',
+  '&:hover': { bgcolor: primaryHover, boxShadow: 'none' },
+  '&.Mui-disabled': { bgcolor: '#B5DCD5', color: '#fff' },
 } as const
 
 const withIcon = (icon: ReactNode, endAdornment?: ReactNode) => ({ InputProps: { startAdornment: <InputAdornment position="start">{icon}</InputAdornment>, endAdornment } })
@@ -392,7 +410,7 @@ const EnrollmentModal: FC<EnrollmentModalProps> = ({ variant = 'dialog', course,
   }
 
   const renderPersonalInfo = () => <Box component="form" onSubmit={(event) => void handlePersonalSubmit(event)} sx={formContainerSx}>
-    <Stack spacing={2} sx={fieldSx}>
+    <Stack spacing={2} sx={fieldStyle}>
       <TextField {...withIcon(<PersonOutlineIcon />)} required fullWidth label="Full Name" name="fullName" autoComplete="name" value={contact.name} onChange={(event) => setContact({ ...contact, name: event.target.value })} />
       <TextField {...withIcon(<MailOutlineIcon />)} required fullWidth label="Email" name="email" type="email" autoComplete="email" value={contact.email} onChange={(event) => setContact({ ...contact, email: event.target.value })} />
       <TextField {...withIcon(<PhoneOutlinedIcon />)} required fullWidth label="Phone" name="phone" type="tel" autoComplete="tel" value={contact.phone} onChange={(event) => setContact({ ...contact, phone: event.target.value })} />
@@ -405,20 +423,20 @@ const EnrollmentModal: FC<EnrollmentModalProps> = ({ variant = 'dialog', course,
         </Stack>
       </>}
       {accountError && <Alert severity="error">{accountError}</Alert>}
-      <Button type="submit" variant="contained" size="large" disabled={isSendingCode} endIcon={<ArrowForwardIcon />} sx={primaryButtonSx}>
+      <Button type="submit" variant="contained" size="large" disabled={isSendingCode} endIcon={<ArrowForwardIcon />} sx={buttonStyle}>
         {isSendingCode ? 'Sending code...' : 'Continue'}
       </Button>
     </Stack>
   </Box>
 
   const renderVerifyEmail = () => <Box component="form" onSubmit={(event) => void handleVerifySubmit(event)} sx={formContainerSx}>
-    <Stack spacing={2} sx={fieldSx}>
+    <Stack spacing={2} sx={fieldStyle}>
       <Typography variant="body1" sx={{ color: navy, textAlign: 'center' }}>We sent a 6-digit code to <strong>{contact.email}</strong>.</Typography>
       <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>Enter the code below to continue. It expires in 10 minutes.</Typography>
       <TextField {...withIcon(<LockOutlinedIcon />)} required fullWidth label="Verification code" name="verificationCode" autoComplete="one-time-code" value={verificationCode} onChange={(event) => setVerificationCode(event.target.value.replace(/\D/g, '').slice(0, 6))} inputProps={{ inputMode: 'numeric', maxLength: 6 }} />
       {verificationError && <Alert severity="error">{verificationError}</Alert>}
       {verificationNotice && <Alert severity="success">{verificationNotice}</Alert>}
-      <Button type="submit" variant="contained" size="large" disabled={isVerifyingCode || verificationCode.length !== 6} endIcon={<ArrowForwardIcon />} sx={primaryButtonSx}>
+      <Button type="submit" variant="contained" size="large" disabled={isVerifyingCode || verificationCode.length !== 6} endIcon={<ArrowForwardIcon />} sx={buttonStyle}>
         {isVerifyingCode ? 'Verifying...' : 'Verify'}
       </Button>
       <Stack direction="row" spacing={1.5} justifyContent="space-between" alignItems="center">
@@ -501,7 +519,7 @@ const EnrollmentModal: FC<EnrollmentModalProps> = ({ variant = 'dialog', course,
           {paymentError && <Alert severity="error">{paymentError}</Alert>}
           <Stack direction={{ xs: 'column-reverse', sm: 'row' }} spacing={1.5} sx={{ pt: 1, borderTop: 1, borderColor: hairline }}>
             {!isAuthenticated && <Button fullWidth variant="outlined" size="large" onClick={() => setActiveStep(0)} disabled={isSubmittingPayment} sx={secondaryButtonSx}>Back</Button>}
-            <Button fullWidth type="submit" variant="contained" size="large" disabled={!paymentInfo.configured || !proofFile || isSubmittingPayment} sx={primaryButtonSx}>
+            <Button fullWidth type="submit" variant="contained" size="large" disabled={!paymentInfo.configured || !proofFile || isSubmittingPayment} sx={buttonStyle}>
               {isSubmittingPayment ? 'Submitting...' : 'Submit for Verification'}
             </Button>
           </Stack>
@@ -513,8 +531,9 @@ const EnrollmentModal: FC<EnrollmentModalProps> = ({ variant = 'dialog', course,
 
   const priceFor = (target: EnrollmentOrderTarget) => paymentInfo?.items.find((item) => 'courseId' in target ? item.courseId === target.courseId : item.classId === target.classId)
 
-  const isPage = variant === 'page'
-  const renderOrderSummary = () => <Box component="aside" aria-label="Order summary" sx={{ p: { xs: 2.25, sm: 2.5 }, borderRadius: '12px', border: isPage ? 0 : 1, borderColor: hairline, bgcolor: isPage ? '#F6F8F8' : '#fff', boxShadow: isPage ? 'none' : '0 8px 24px rgba(18, 124, 113, 0.06)', position: { md: 'sticky' }, top: { md: 24 } }}>
+  const fieldStyle = variant === 'page' ? pageFieldSx : fieldSx
+  const buttonStyle = variant === 'page' ? pageButtonSx : primaryButtonSx
+  const renderOrderSummary = () => <Box component="aside" aria-label="Order summary" sx={{ p: { xs: 2.25, sm: 2.5 }, border: 1, borderColor: hairline, borderRadius: '16px', bgcolor: '#fff', boxShadow: '0 8px 24px rgba(18, 124, 113, 0.06)', position: { md: 'sticky' }, top: { md: 24 } }}>
     <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
       <Typography variant="h6" sx={{ fontWeight: 750, color: navy }}>Order summary</Typography>
       {!initialItems && <Button size="small" startIcon={<AddIcon />} disabled={cartItems.length >= 10 || isSubmittingPayment} onClick={() => setCatalogOpen(true)} sx={{ textTransform: 'none', color: primary, fontWeight: 600 }}>{cartItems.length >= 10 ? 'Cart full' : 'Add item'}</Button>}
@@ -556,54 +575,47 @@ const EnrollmentModal: FC<EnrollmentModalProps> = ({ variant = 'dialog', course,
       ? { title: 'Verify email', description: 'Enter the 6-digit code we sent to your email.' }
       : { title: 'Payment details', description: 'Scan the QR code, pay the exact total, then upload your payment screenshot.' }
 
-  const renderProgress = () => <nav aria-label="Checkout progress" className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 border-b border-gray-200 bg-white px-4 py-4 text-xs sm:gap-x-4 sm:text-base">
+  const renderProgress = () => <nav aria-label="Checkout progress" className="mb-8 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
     {progressLabels.map((label, index) => {
       const completed = index < currentStep
       const current = index === currentStep
       return <Fragment key={label}>
         {index > 0 && <ChevronRightIcon sx={{ fontSize: 16 }} className="text-gray-400" />}
-        <div className="flex items-center gap-2 sm:gap-3">
-          <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${completed ? 'bg-emerald-200 text-emerald-700' : current ? 'bg-[#127C71] text-white ring-2 ring-[#127C71] ring-offset-2' : 'bg-gray-400 text-white'}`}>{completed ? <CheckOutlinedIcon sx={{ fontSize: 16 }} /> : index + 1}</span>
-          <span className={`font-semibold ${completed || current ? 'text-gray-900' : 'text-gray-500'}`}>{label}</span>
-        </div>
+        <span className={`border-b-2 pb-1 font-semibold ${current ? 'border-[#127C71] text-gray-900' : completed ? 'border-transparent text-[#127C71]' : 'border-transparent text-gray-400'}`}>{label}</span>
       </Fragment>
     })}
   </nav>
 
-  const renderPageSummary = () => <section className="px-4 pt-8 sm:px-10 lg:px-12 lg:pb-8">
-    <p className="text-xl font-medium text-gray-900">Order Summary</p>
-    <p className="text-gray-400">Review the courses in your order before paying.</p>
-    <div className="mt-8 space-y-3 rounded-lg border border-gray-200 bg-white px-2 py-4 sm:px-6">
+  const renderPageSummary = () => <aside aria-label="Order summary" className="h-fit rounded-lg bg-[#F7F9FA] p-6 lg:p-8">
+    <h2 className="text-xl font-bold text-gray-900">Order summary</h2>
+    <ul className="mt-5 divide-y divide-gray-200">
       {cartItems.map((item) => {
         const amount = priceFor(item.target)?.amount
-        return <div key={'courseId' in item.target ? `course-${item.target.courseId}` : `class-${item.target.classId}`} className="flex flex-col rounded-lg bg-white sm:flex-row">
-          <div className="m-2 grid h-24 w-28 shrink-0 place-items-center rounded-md border border-[#d9e2df] bg-[#E6F4F1] text-[#127C71]"><SchoolOutlinedIcon /></div>
-          <div className="flex min-w-0 w-full flex-col px-4 py-4">
-            <span className="font-semibold text-gray-900 break-words">{item.title}</span>
-            <span className="text-sm text-gray-400">{'courseId' in item.target ? 'Course' : 'Class'}</span>
-            {amount !== undefined && paymentInfo && <p className="mt-auto pt-2 text-lg font-bold text-gray-900">{paymentInfo.currency} {amount.toFixed(2)}</p>}
+        return <li key={'courseId' in item.target ? `course-${item.target.courseId}` : `class-${item.target.classId}`} className="flex items-start justify-between gap-4 py-3">
+          <div className="min-w-0">
+            <p className="break-words text-sm font-semibold text-gray-900">{item.title}</p>
+            <p className="text-xs text-gray-500">{'courseId' in item.target ? 'Course' : 'Class'}</p>
           </div>
-        </div>
+          {amount !== undefined && paymentInfo && <p className="whitespace-nowrap text-sm font-semibold text-gray-900">{paymentInfo.currency} {amount.toFixed(2)}</p>}
+        </li>
       })}
+    </ul>
+    <div className="mt-4 flex items-center justify-between gap-4 border-t border-gray-200 pt-4">
+      <p className="font-bold text-gray-900">Total ({cartItems.length} {cartItems.length === 1 ? 'item' : 'items'})</p>
+      {paymentInfo
+        ? <p className="whitespace-nowrap text-xl font-bold text-gray-900">{paymentInfo.currency} {paymentInfo.amount.toFixed(2)}</p>
+        : !paymentInfoError && <CircularProgress size={22} aria-label="Loading order total" />}
     </div>
-    {paymentInfo
-      ? <div className="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">
-        <p className="text-sm font-medium text-gray-900">Total</p>
-        <p className="text-2xl font-semibold text-gray-900">{paymentInfo.currency} {paymentInfo.amount.toFixed(2)}</p>
-      </div>
-      : !paymentInfoError && <div className="mt-6 flex justify-end"><CircularProgress size={22} aria-label="Loading order total" /></div>}
-  </section>
+  </aside>
 
-  const pageLayout = submitted ? renderConfirmation() : <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
-    {renderProgress()}
-    <div className="grid lg:grid-cols-2">
-      {renderPageSummary()}
-      <section className="mt-10 bg-gray-50 px-4 pb-8 pt-8 sm:px-10 lg:mt-0 lg:px-12">
-        <p className="text-xl font-medium text-gray-900">{stepCopy.title}</p>
-        <p className="mb-6 text-gray-400">{stepCopy.description}</p>
-        {activeStep === 0 ? renderPersonalInfo() : activeStep === 1 ? renderVerifyEmail() : renderPaymentInfo()}
-      </section>
-    </div>
+  const pageLayout = submitted ? renderConfirmation() : <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-12">
+    <section className="min-w-0">
+      {renderProgress()}
+      <h2 className="text-xl font-bold text-gray-900">{stepCopy.title}</h2>
+      <p className="mb-6 mt-1 text-sm text-gray-500">{stepCopy.description}</p>
+      {activeStep === 0 ? renderPersonalInfo() : activeStep === 1 ? renderVerifyEmail() : renderPaymentInfo()}
+    </section>
+    {renderPageSummary()}
   </div>
 
   return <>
