@@ -28,13 +28,11 @@ import PersonOutlineIcon from '@mui/icons-material/PersonOutline'
 import PhoneIphoneOutlinedIcon from '@mui/icons-material/PhoneIphoneOutlined'
 import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined'
 import QrCode2OutlinedIcon from '@mui/icons-material/QrCode2Outlined'
-import SchoolOutlinedIcon from '@mui/icons-material/SchoolOutlined'
 import VerifiedUserOutlinedIcon from '@mui/icons-material/VerifiedUserOutlined'
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined'
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined'
 import { type FC, type FormEvent, type ReactNode, useEffect, useState } from 'react'
 import AddIcon from '@mui/icons-material/Add'
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
 import { type AdminCourse } from '@/components/admin/admin-data'
@@ -438,28 +436,14 @@ const EnrollmentModal: FC<EnrollmentModalProps> = ({ course, classId = null, ini
   const renderPaymentInfo = () => <Stack spacing={{ xs: 2, sm: 2.5 }}>
     {paymentInfoError && <Alert severity="error">{paymentInfoError}</Alert>}
     {!paymentInfo && !paymentInfoError && <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress aria-label="Loading payment information" /></Box>}
-    {paymentInfo && <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1.3fr) minmax(0, 1fr)' }, gap: { xs: 2.5, md: 3 }, alignItems: 'start' }}>
-      <Box sx={{ p: { xs: 2, sm: 2.5 }, border: 1, borderColor: '#CDE7E1', borderRadius: '16px', bgcolor: '#F2FAF8', gridColumn: { md: 2 }, gridRow: { md: '1 / span 2' }, position: { md: 'sticky' }, top: { md: 16 } }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
-          <Box><Typography variant="h6" sx={{ fontWeight: 750, color: navy }}>Order summary</Typography><Typography variant="body2" color="text.secondary">Prices are confirmed by the server.</Typography></Box>
-          {!initialItems && <Button variant="outlined" startIcon={<AddIcon />} disabled={cartItems.length >= 10 || isSubmittingPayment} onClick={() => setCatalogOpen(true)} sx={{ borderRadius: 2, textTransform: 'none', color: primary, borderColor: primary }}>{cartItems.length >= 10 ? 'Cart full' : 'Add item'}</Button>}
-        </Stack>
-        <Stack spacing={1}>
-          {paymentInfo.items.map((item, index) => <Box key={`${item.courseId ?? 'course'}-${item.classId ?? 'class'}`} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, p: 1.25, bgcolor: '#fff', borderRadius: 2 }}>
-            <Box sx={{ minWidth: 0 }}><Typography sx={{ fontWeight: 650, color: navy, overflowWrap: 'anywhere' }}>{item.title}</Typography><Typography variant="caption" color="text.secondary">{item.classId === null ? 'Course' : 'Class'}</Typography></Box>
-            <Stack direction="row" spacing={1} alignItems="center"><Typography sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{paymentInfo.currency} {item.amount.toFixed(2)}</Typography>{!initialItems && <IconButton aria-label={`Remove ${item.title} from order`} disabled={cartItems.length <= 1 || isSubmittingPayment} onClick={() => removeCartItem(index)} size="small"><DeleteOutlineIcon /></IconButton>}</Stack>
-          </Box>)}
-        </Stack>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1.5, pt: 1.5, borderTop: 1, borderColor: '#CDE7E1' }}><Typography sx={{ fontWeight: 700 }}>Order total</Typography><Typography variant="h5" sx={{ color: primary, fontWeight: 800 }}>{paymentInfo.currency} {paymentInfo.amount.toFixed(2)}</Typography></Box>
-      </Box>
-
+    {paymentInfo && <Box>
       <Box>
         <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 0.75 }}>
           <Box sx={{ display: 'grid', placeItems: 'center', width: 36, height: 36, borderRadius: '12px', color: primary, bgcolor: lavender }}><QrCode2OutlinedIcon /></Box>
           <Typography variant="h6" sx={{ fontWeight: 700, color: navy }}>Scan to Pay</Typography>
         </Stack>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Open your mobile banking or payment app and scan the QR code to complete your payment.</Typography>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 0.9fr) minmax(0, 1.1fr)' }, gap: { xs: 2, md: 2.5 } }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'minmax(0, 0.9fr) minmax(0, 1.1fr)' }, gap: { xs: 2, sm: 2.5 } }}>
           <Box sx={{ display: 'grid', alignContent: 'start', justifyItems: 'center', gap: 1.5, p: { xs: 2, sm: 2.5 }, border: 1, borderColor: hairline, borderRadius: '16px', bgcolor: '#fff', boxShadow: '0 8px 24px rgba(18, 124, 113, 0.06)' }}>
             <Typography variant="subtitle2" sx={{ alignSelf: 'start', fontWeight: 700, color: navy }}>Business payment QR</Typography>
             <Box sx={{ display: 'grid', placeItems: 'center', width: '100%', minHeight: { xs: 240, sm: 280 }, borderRadius: '14px', bgcolor: '#F4FAF8' }}>
@@ -524,23 +508,51 @@ const EnrollmentModal: FC<EnrollmentModalProps> = ({ course, classId = null, ini
     </Box>}
   </Stack>
 
+  const priceFor = (target: EnrollmentOrderTarget) => paymentInfo?.items.find((item) => 'courseId' in target ? item.courseId === target.courseId : item.classId === target.classId)
+
+  const renderOrderSummary = () => <Box component="aside" aria-label="Order summary" sx={{ p: { xs: 2.25, sm: 2.5 }, border: 1, borderColor: hairline, borderRadius: '16px', bgcolor: '#fff', boxShadow: '0 8px 24px rgba(18, 124, 113, 0.06)', position: { md: 'sticky' }, top: { md: 0 } }}>
+    <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+      <Typography variant="h6" sx={{ fontWeight: 750, color: navy }}>Order summary</Typography>
+      {!initialItems && <Button size="small" startIcon={<AddIcon />} disabled={cartItems.length >= 10 || isSubmittingPayment} onClick={() => setCatalogOpen(true)} sx={{ textTransform: 'none', color: primary, fontWeight: 600 }}>{cartItems.length >= 10 ? 'Cart full' : 'Add item'}</Button>}
+    </Stack>
+    <Stack divider={<Box sx={{ borderBottom: 1, borderColor: hairline }} />}>
+      {cartItems.map((item, index) => {
+        const amount = priceFor(item.target)?.amount
+        return <Box key={'courseId' in item.target ? `course-${item.target.courseId}` : `class-${item.target.classId}`} sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1.5, py: 1.5 }}>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography sx={{ fontWeight: 650, color: navy, overflowWrap: 'anywhere', lineHeight: 1.35 }}>{item.title}</Typography>
+            <Typography variant="caption" color="text.secondary">{'courseId' in item.target ? 'Course' : 'Class'}</Typography>
+            {!initialItems && <Button size="small" aria-label={`Remove ${item.title} from order`} disabled={cartItems.length <= 1 || isSubmittingPayment} onClick={() => removeCartItem(index)} sx={{ display: 'block', p: 0, mt: 0.5, minWidth: 0, color: muted, textTransform: 'none', fontWeight: 600 }}>Remove</Button>}
+          </Box>
+          {amount !== undefined && paymentInfo && <Typography sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{paymentInfo.currency} {amount.toFixed(2)}</Typography>}
+        </Box>
+      })}
+    </Stack>
+    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1.5, pt: 2, borderTop: 1, borderColor: hairline }}>
+      <Typography sx={{ fontWeight: 700, color: navy }}>Total</Typography>
+      {paymentInfo ? <Typography variant="h5" sx={{ color: primary, fontWeight: 800 }}>{paymentInfo.currency} {paymentInfo.amount.toFixed(2)}</Typography> : paymentInfoError ? null : <CircularProgress size={22} aria-label="Loading order total" />}
+    </Box>
+  </Box>
+
   return <>
-  <Dialog open={open} onClose={onClose} fullScreen={isMobile} maxWidth={false} aria-labelledby="enrollment-dialog-title" PaperProps={{ sx: { width: '100%', maxWidth: { sm: 960 }, m: { xs: 0, sm: 2 }, borderRadius: { xs: 0, sm: '24px' }, overflow: 'hidden', backgroundImage: 'none', boxShadow: '0 24px 64px rgba(23, 23, 43, 0.14)', maxHeight: { sm: 'min(92vh, 960px)' } } }}>
-    <DialogTitle id="enrollment-dialog-title" component="div" sx={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 1.5, pt: { xs: 4, sm: 4.5 }, pb: 0, px: { xs: 2.5, sm: 4 } }}>
-      <IconButton aria-label="Close enrollment" onClick={onClose} sx={{ position: 'absolute', top: 16, right: 16, width: 40, height: 40, borderRadius: '12px', color: muted, bgcolor: '#F2F6F5', '&:hover': { color: primary, bgcolor: lavender } }}><CloseIcon /></IconButton>
-      <Box sx={{ display: 'grid', placeItems: 'center', width: 96, height: 96, borderRadius: '50%', bgcolor: 'rgba(18, 124, 113, 0.10)' }}>
-        <Box sx={{ display: 'grid', placeItems: 'center', width: 72, height: 72, borderRadius: '50%', color: '#fff', background: primaryGradient, boxShadow: '0 10px 28px rgba(18, 124, 113, 0.4)' }}><SchoolOutlinedIcon sx={{ fontSize: 34 }} /></Box>
-      </Box>
+  <Dialog open={open} onClose={onClose} fullScreen={isMobile} maxWidth={false} aria-labelledby="enrollment-dialog-title" PaperProps={{ sx: { width: '100%', maxWidth: { sm: 1000 }, m: { xs: 0, sm: 2 }, borderRadius: { xs: 0, sm: '24px' }, overflow: 'hidden', backgroundImage: 'none', boxShadow: '0 24px 64px rgba(23, 23, 43, 0.14)', maxHeight: { sm: 'min(92vh, 960px)' } } }}>
+    <DialogTitle id="enrollment-dialog-title" component="div" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, py: 2, px: { xs: 2.5, sm: 4 }, borderBottom: 1, borderColor: hairline }}>
       <Box>
-        <Typography component="span" variant="h5" sx={{ display: 'block', fontWeight: 800, lineHeight: 1.25, color: navy }}>Enroll in {classId === null ? 'this Course' : 'this Class'}</Typography>
-        <Typography component="span" variant="body1" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>Complete your payment to get full access.</Typography>
+        <Typography component="span" variant="h5" sx={{ display: 'block', fontWeight: 800, lineHeight: 1.25, color: navy }}>Checkout</Typography>
+        <Typography component="span" variant="body2" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>Complete your payment to get full access to {classId === null ? 'this course' : 'this class'}.</Typography>
       </Box>
+      <IconButton aria-label="Close enrollment" onClick={onClose} sx={{ width: 40, height: 40, flexShrink: 0, borderRadius: '12px', color: muted, bgcolor: '#F2F6F5', '&:hover': { color: primary, bgcolor: lavender } }}><CloseIcon /></IconButton>
     </DialogTitle>
     <DialogContent sx={{ px: { xs: 2.5, sm: 4 }, pt: { xs: 3, sm: 3.5 }, pb: { xs: 3, sm: 4 }, overflowY: 'auto' }}>
-      {!submitted && <Stepper activeStep={isAuthenticated ? 0 : activeStep} alternativeLabel sx={stepperSx}>
-        {(isAuthenticated ? ['Payment'] : steps).map((label, index) => <Step key={label} completed={!isAuthenticated && index < activeStep}><StepLabel StepIconComponent={StepBadge}>{label}</StepLabel></Step>)}
-      </Stepper>}
-      {submitted ? renderConfirmation() : activeStep === 0 ? renderPersonalInfo() : activeStep === 1 ? renderVerifyEmail() : renderPaymentInfo()}
+      {submitted ? renderConfirmation() : <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 340px' }, gap: { xs: 3, md: 4 }, alignItems: 'start' }}>
+        <Box sx={{ minWidth: 0 }}>
+          <Stepper activeStep={isAuthenticated ? 0 : activeStep} alternativeLabel sx={stepperSx}>
+            {(isAuthenticated ? ['Payment'] : steps).map((label, index) => <Step key={label} completed={!isAuthenticated && index < activeStep}><StepLabel StepIconComponent={StepBadge}>{label}</StepLabel></Step>)}
+          </Stepper>
+          {activeStep === 0 ? renderPersonalInfo() : activeStep === 1 ? renderVerifyEmail() : renderPaymentInfo()}
+        </Box>
+        {renderOrderSummary()}
+      </Box>}
     </DialogContent>
   </Dialog>
   <Dialog open={catalogOpen} onClose={() => setCatalogOpen(false)} fullWidth maxWidth="sm" aria-labelledby="catalog-picker-title">
