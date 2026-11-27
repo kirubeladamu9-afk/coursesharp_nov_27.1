@@ -586,24 +586,25 @@ const EnrollmentModal: FC<EnrollmentModalProps> = ({ variant = 'dialog', course,
     })}
   </nav>
 
-  const renderPageSummary = () => <aside aria-label="Order summary" className="h-fit rounded-lg bg-[#F7F9FA] p-6 lg:p-8">
-    <h2 className="text-xl font-bold text-gray-900">Order summary</h2>
-    <ul className="mt-5 divide-y divide-gray-200">
+  const renderPageSummary = () => <aside aria-label="Order summary" className="h-fit rounded-3xl bg-[#f5f7fa] px-5 pb-6 pt-5 sm:px-7 sm:pb-8 sm:pt-7">
+    <span className="text-xs font-bold leading-5 tracking-[0.08em] text-[#127C71]">ORDER SUMMARY</span>
+    <h2 className="mt-1 text-2xl font-bold leading-[1.25] tracking-[-0.04em] text-slate-950">Your cart</h2>
+    <ul className="mt-6 divide-y divide-slate-200">
       {cartItems.map((item) => {
         const amount = priceFor(item.target)?.amount
-        return <li key={'courseId' in item.target ? `course-${item.target.courseId}` : `class-${item.target.classId}`} className="flex items-start justify-between gap-4 py-3">
+        return <li key={'courseId' in item.target ? `course-${item.target.courseId}` : `class-${item.target.classId}`} className="flex items-start justify-between gap-4 py-4">
           <div className="min-w-0">
-            <p className="break-words text-sm font-semibold text-gray-900">{item.title}</p>
-            <p className="text-xs text-gray-500">{'courseId' in item.target ? 'Course' : 'Class'}</p>
+            <p className="break-words text-base font-medium leading-6 text-slate-950">{item.title}</p>
+            <span className="mt-2 inline-block rounded-full bg-white px-3 py-1 text-sm font-medium leading-5 text-slate-600">{'courseId' in item.target ? 'Course' : 'Class'}</span>
           </div>
-          {amount !== undefined && paymentInfo && <p className="whitespace-nowrap text-sm font-semibold text-gray-900">{paymentInfo.currency} {amount.toFixed(2)}</p>}
+          {amount !== undefined && paymentInfo && <p className="whitespace-nowrap text-base font-semibold text-slate-950">{paymentInfo.currency} {amount.toFixed(2)}</p>}
         </li>
       })}
     </ul>
-    <div className="mt-4 flex items-center justify-between gap-4 border-t border-gray-200 pt-4">
-      <p className="font-bold text-gray-900">Total ({cartItems.length} {cartItems.length === 1 ? 'item' : 'items'})</p>
+    <div className="mt-2 flex items-center justify-between gap-4 border-t border-slate-200 pt-5">
+      <p className="text-lg font-medium text-slate-950">Total</p>
       {paymentInfo
-        ? <p className="whitespace-nowrap text-xl font-bold text-gray-900">{paymentInfo.currency} {paymentInfo.amount.toFixed(2)}</p>
+        ? <p className="whitespace-nowrap text-2xl font-bold tracking-[-0.02em] text-slate-950">{paymentInfo.currency} {paymentInfo.amount.toFixed(2)}</p>
         : !paymentInfoError && <CircularProgress size={22} aria-label="Loading order total" />}
     </div>
   </aside>
