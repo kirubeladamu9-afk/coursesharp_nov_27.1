@@ -74,7 +74,8 @@ const SignInPage: FC<SignInPageProps> = ({ mode }) => {
       if (!isSignUp) {
         saveAuthenticatedUser(user)
         setIsRedirecting(true)
-        window.setTimeout(() => navigateTo(user.mustResetPassword ? '/security' : user.role === 'admin' ? '/admin' : user.role === 'tutor' ? '/tutor' : '/dashboard'), 400)
+        const returnTo = new URLSearchParams(window.location.search).get('returnTo')
+        window.setTimeout(() => navigateTo(user.mustResetPassword ? '/security' : returnTo === '/cart' && user.role === 'student' ? '/cart' : user.role === 'admin' ? '/admin' : user.role === 'tutor' ? '/tutor' : '/dashboard'), 400)
         return
       }
       toast.add({

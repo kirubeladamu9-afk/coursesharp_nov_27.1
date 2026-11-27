@@ -438,6 +438,13 @@ const initializeDatabase = async () => {
     modules: "JSONB NOT NULL DEFAULT '[]'::jsonb",
     updated_at: 'TIMESTAMPTZ NOT NULL DEFAULT NOW()',
   })
+  await sql`
+    CREATE TABLE IF NOT EXISTS user_course_carts (
+      user_id BIGINT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      course_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `
 
   await sql`
     CREATE TABLE IF NOT EXISTS practice_exams (
@@ -2488,6 +2495,29 @@ app.patch('/api/admin/reviews/:type/:id', requireAdmin, async (request, response
   return response.json({ success: true })
 })
 
+app.get('/api/cart/courses', requireAuthenticated, async (request, response) => {
+  const [cart] = await sql`SELECT course_ids AS "courseIds" FROM user_course_carts WHERE user_id = ${request.userId}`
+  response.json({ courseIds: cart?.courseIds ?? [] })
+})
+
+app.put('/api/cart/courses', requireAuthenticated, async (request, response) => {
+  const input = request.body?.courseIds
+  if (!Array.isArray(input) || input.length > 10 || input.some((id) => !Number.isSafeInteger(id) || id < 1)) {
+    return response.status(400).json({ message: 'Choose up to ten valid courses.' })
+  }
+  const courseIds = [...new Set(input)]
+  if (courseIds.length > 0) {
+    const available = await sql`SELECT id FROM courses WHERE id = ANY(${courseIds}) AND status = 'Published'`
+    if (available.length !== courseIds.length) return response.status(409).json({ message: 'One or more courses are no longer available.' })
+  }
+  await sql`
+    INSERT INTO user_course_carts (user_id, course_ids, updated_at)
+    VALUES (${request.userId}, ${JSON.stringify(courseIds)}::jsonb, NOW())
+    ON CONFLICT (user_id) DO UPDATE SET course_ids = EXCLUDED.course_ids, updated_at = NOW()
+  `
+  response.json({ courseIds })
+})
+
 app.get('/api/courses', async (_request, response) => {
   const courses = await sql`
     SELECT ${courseSummaryColumns}
@@ -4082,12 +4112,14 @@ app.post('/api/enrollment/manual-order', async (request, response) => {
   let result
   try {
     result = await sql.begin(async (transaction) => {
-      const [verification] = await transaction`
-        SELECT id FROM enrollment_email_verifications
-        WHERE email = ${profile.email} AND target_key = ${verificationKey} AND verified_until > NOW()
-        FOR UPDATE
-      `
-      if (!verification) return { error: 'Verify your email for this exact order before submitting payment.', status: 403 }
+      if (!authenticated) {
+        const [verification] = await transaction`
+          SELECT id FROM enrollment_email_verifications
+          WHERE email = ${profile.email} AND target_key = ${verificationKey} AND verified_until > NOW()
+          FOR UPDATE
+        `
+        if (!verification) return { error: 'Verify your email for this exact order before submitting payment.', status: 403 }
+      }
 
       const [user] = authenticated ? await transaction`
         UPDATE users

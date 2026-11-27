@@ -414,6 +414,7 @@ export interface TutorClassStudent {
 }
 
 const authStorageKey = 'coursespace-auth-user'
+const courseCartStorageKey = 'coursesharp-course-cart'
 const legacyAuthSessionTokenKey = 'coursespace-auth-session-token'
 
 const getErrorMessage = async (response: Response) => {
@@ -553,6 +554,44 @@ const requestApi = async (url: string, init?: RequestInit) => {
     }
   }
   return response
+}
+
+export const getCourseCartIds = (): number[] => {
+  try {
+    const value = JSON.parse(localStorage.getItem(courseCartStorageKey) ?? '[]')
+    return Array.isArray(value) ? [...new Set(value.map(Number).filter((id) => Number.isSafeInteger(id) && id > 0))] : []
+  } catch {
+    return []
+  }
+}
+
+const writeCourseCartIds = (ids: number[]) => {
+  localStorage.setItem(courseCartStorageKey, JSON.stringify(ids))
+  window.dispatchEvent(new Event('course-cart-change'))
+}
+
+const saveRemoteCourseCart = async (courseIds: number[]) => {
+  const response = await requestApi('/api/cart/courses', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ courseIds }) })
+  if (!response.ok) throw new Error(await getErrorMessage(response))
+}
+
+export const loadCourseCartIds = async (): Promise<number[]> => {
+  const localIds = getCourseCartIds()
+  if (!getAuthenticatedUser()) return localIds
+  const response = await requestApi('/api/cart/courses')
+  if (!response.ok) throw new Error(await getErrorMessage(response))
+  const remote = await response.json() as { courseIds: number[] }
+  const merged = [...new Set([...remote.courseIds, ...localIds])]
+  if (merged.length !== remote.courseIds.length) await saveRemoteCourseCart(merged)
+  writeCourseCartIds(merged)
+  return merged
+}
+
+export const saveCourseCartIds = async (courseIds: number[]) => {
+  const normalized = [...new Set(courseIds.map(Number).filter((id) => Number.isSafeInteger(id) && id > 0))]
+  if (normalized.length > 10) throw new Error('A checkout order can contain up to ten courses.')
+  writeCourseCartIds(normalized)
+  if (getAuthenticatedUser()) await saveRemoteCourseCart(normalized)
 }
 
 const requestCourse = async (url: string, init?: RequestInit): Promise<AdminCourse> => {
@@ -1594,6 +1633,7 @@ export const submitCredentials = async (mode: 'sign-in' | 'sign-up', email: stri
 
 export const saveAuthenticatedUser = (user: AuthUser) => {
   sessionStorage.setItem(authStorageKey, JSON.stringify(user))
+  void loadCourseCartIds().catch(() => undefined)
 }
 
 export const getAuthenticatedUser = (): AuthUser | null => {
@@ -1610,6 +1650,8 @@ export const getAuthenticatedUser = (): AuthUser | null => {
 export const clearAuthenticatedUser = () => {
   sessionStorage.removeItem(authStorageKey)
   sessionStorage.removeItem(legacyAuthSessionTokenKey)
+  localStorage.removeItem(courseCartStorageKey)
+  window.dispatchEvent(new Event('course-cart-change'))
 }
 
 export const getSavedStudents = async (): Promise<SavedStudent[]> => {

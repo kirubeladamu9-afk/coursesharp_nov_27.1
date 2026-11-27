@@ -19,6 +19,7 @@ const loadSection = <Props extends object = {}>(load: () => Promise<{ default: R
 const AdminDashboard = loadSection(() => import('@/components/admin/admin-dashboard'))
 const CourseDetailPage = loadSection(() => import('@/components/course/course-detail-page'))
 const CourseMarketplacePage = loadSection(() => import('@/components/course/course-marketplace-page'))
+const CourseCartPage = loadSection(() => import('@/components/course/course-cart-page'))
 const TrainingProgramsPage = loadSection<{ courses: Course[]; darkMode: boolean; onToggleDarkMode: () => void; programId?: string }>(() => import('@/components/home/training-programs-page'))
 const StudentDashboard = loadSection(() => import('@/components/course/student-dashboard'))
 const AccountSecurity = loadSection(() => import('@/components/course/account-security'))
@@ -112,6 +113,7 @@ const App: React.FC<AppProps> = ({ darkMode, onToggleDarkMode }) => {
   const isSignInPath = /^\/sign-in\/?$/.test(currentPath)
   const isSetPasswordPath = /^\/set-password\/?$/.test(currentPath)
   const isCourseMarketplacePath = /^\/courses\/?$/.test(currentPath)
+  const isCourseCartPath = /^\/cart\/?$/.test(currentPath)
   const isTrainingProgramsPath = /^\/training-programs(?:\/|$)/.test(currentPath)
   const trainingProgramMatch = currentPath.match(/^\/training-programs\/([^/]+)\/?$/)
   const courseMatch = currentPath.match(/^\/courses\/([^/]+)\/?$/)
@@ -119,7 +121,6 @@ const App: React.FC<AppProps> = ({ darkMode, onToggleDarkMode }) => {
   const isAuthenticated = currentUser !== null
   const canAccessAdmin = currentUser?.role === 'admin'
   const canAccessTutor = currentUser?.role === 'tutor'
-  const isPublicPath = !isAdminPath && !isTutorPath && !isDashboardPath && !isSecurityPath && !isSetPasswordPath
   const signedInHomePath = currentUser?.role === 'admin' ? '/admin' : currentUser?.role === 'tutor' ? '/tutor' : '/dashboard'
 
   useEffect(() => {
@@ -148,13 +149,15 @@ const App: React.FC<AppProps> = ({ darkMode, onToggleDarkMode }) => {
                       ? 'Contact Us'
                       : isCourseMarketplacePath
                         ? 'Courses'
-                        : isTrainingProgramsPath
+                        : isCourseCartPath
+                          ? 'Cart'
+                          : isTrainingProgramsPath
                           ? 'Training Programs'
                           : courseMatch
                           ? 'Course'
                           : 'Home'
     document.title = `${SITE_NAME} | ${pageName}`
-  }, [isSignInPath, currentPath, isAboutPath, isAdminPath, isBookstorePath, isContactPath, isCourseMarketplacePath, isDashboardPath, isPracticeCatalogPath, isTrainingProgramsPath, isTutorPath, practiceExamMatch, courseMatch])
+  }, [isSignInPath, currentPath, isAboutPath, isAdminPath, isBookstorePath, isContactPath, isCourseMarketplacePath, isCourseCartPath, isDashboardPath, isPracticeCatalogPath, isTrainingProgramsPath, isTutorPath, practiceExamMatch, courseMatch])
 
   useEffect(() => {
     if (isAdminPath || isDashboardPath || isTutorPath || isSecurityPath || window.location.hash) return
@@ -167,11 +170,10 @@ const App: React.FC<AppProps> = ({ darkMode, onToggleDarkMode }) => {
     if (isTutorPath && !canAccessTutor) navigateTo('/', true)
     if (isSecurityPath && !isAuthenticated) navigateTo('/sign-in', true)
     if (isDashboardPath && (!isAuthenticated || currentUser?.role === 'admin' || currentUser?.role === 'tutor')) navigateTo(currentUser?.role === 'admin' ? '/admin' : currentUser?.role === 'tutor' ? '/tutor' : '/', true)
-    if (isAuthenticated && isPublicPath) navigateTo(signedInHomePath, true)
-  }, [canAccessAdmin, canAccessTutor, currentPath, currentUser?.role, isAdminPath, isAuthenticated, isDashboardPath, isPublicPath, isSecurityPath, isTutorPath, signedInHomePath])
+  }, [canAccessAdmin, canAccessTutor, currentPath, currentUser?.role, isAdminPath, isAuthenticated, isDashboardPath, isSecurityPath, isTutorPath])
 
   useEffect(() => {
-    if (isAdminPath || isDashboardPath || isTutorPath || isSecurityPath || isPracticeCatalogPath || practiceExamMatch || isAboutPath || isBookstorePath || isContactPath || isSignInPath || courseMatch) return
+    if (isAdminPath || isDashboardPath || isTutorPath || isSecurityPath || isPracticeCatalogPath || practiceExamMatch || isAboutPath || isBookstorePath || isContactPath || isSignInPath || isCourseCartPath || courseMatch) return
 
     let isCurrent = true
     getCourses()
@@ -185,7 +187,7 @@ const App: React.FC<AppProps> = ({ darkMode, onToggleDarkMode }) => {
     return () => {
       isCurrent = false
     }
-  }, [currentPath, isAboutPath, isAdminPath, isBookstorePath, isContactPath, isDashboardPath, isPracticeCatalogPath, isSecurityPath, isTutorPath, practiceExamMatch])
+  }, [currentPath, isAboutPath, isAdminPath, isBookstorePath, isContactPath, isCourseCartPath, isDashboardPath, isPracticeCatalogPath, isSecurityPath, isTutorPath, practiceExamMatch])
 
   const isHomePath = /^\/?$/.test(currentPath)
 
@@ -194,7 +196,7 @@ const App: React.FC<AppProps> = ({ darkMode, onToggleDarkMode }) => {
     return () => document.documentElement.classList.remove('home-section-snap')
   }, [isHomePath])
 
-  if ((isAdminPath && !canAccessAdmin) || (isTutorPath && !canAccessTutor) || (isSecurityPath && !isAuthenticated) || (isDashboardPath && (!isAuthenticated || currentUser?.role === 'admin' || currentUser?.role === 'tutor')) || (isAuthenticated && isPublicPath)) return <RouteLoadingState message="Returning to Coursespace..." />
+  if ((isAdminPath && !canAccessAdmin) || (isTutorPath && !canAccessTutor) || (isSecurityPath && !isAuthenticated) || (isDashboardPath && (!isAuthenticated || currentUser?.role === 'admin' || currentUser?.role === 'tutor'))) return <RouteLoadingState message="Returning to Coursespace..." />
   if (isSecurityPath) return <RouteSuspense path={currentPath}><Container maxWidth="lg" sx={{ py: { xs: 3, md: 6 } }}><Button onClick={() => navigateTo(currentUser?.role === 'admin' ? '/admin' : currentUser?.role === 'tutor' ? '/tutor' : '/dashboard')} sx={{ mb: 3 }}>Back to dashboard</Button><AccountSecurity /></Container></RouteSuspense>
   if (isAdminPath) return <RouteSuspense path={currentPath}><AdminDashboard darkMode={darkMode} onToggleDarkMode={onToggleDarkMode} /></RouteSuspense>
   if (isTutorPath) return <RouteSuspense path={currentPath}><TutorDashboard darkMode={darkMode} onToggleDarkMode={onToggleDarkMode} /></RouteSuspense>
@@ -204,6 +206,7 @@ const App: React.FC<AppProps> = ({ darkMode, onToggleDarkMode }) => {
   if (isAboutPath) return <RouteSuspense path={currentPath}><InfoPage kind="about" darkMode={darkMode} onToggleDarkMode={onToggleDarkMode} /></RouteSuspense>
   if (isBookstorePath) return <RouteSuspense path={currentPath}><BookstorePage darkMode={darkMode} onToggleDarkMode={onToggleDarkMode} /></RouteSuspense>
   if (isCourseMarketplacePath) return <RouteSuspense path={currentPath}><CourseMarketplacePage courses={homeCourses ?? []} darkMode={darkMode} onToggleDarkMode={onToggleDarkMode} isLoading={homeCourses === null} /></RouteSuspense>
+  if (isCourseCartPath) return <RouteSuspense path={currentPath}><CourseCartPage darkMode={darkMode} onToggleDarkMode={onToggleDarkMode} /></RouteSuspense>
   if (isTrainingProgramsPath) return <RouteSuspense path={currentPath}><TrainingProgramsPage courses={homeCourses ?? []} darkMode={darkMode} onToggleDarkMode={onToggleDarkMode} programId={trainingProgramMatch ? decodeURIComponent(trainingProgramMatch[1]) : undefined} /></RouteSuspense>
   if (isContactPath) return <RouteSuspense path={currentPath}><InfoPage kind="contact" darkMode={darkMode} onToggleDarkMode={onToggleDarkMode} /></RouteSuspense>
   if (isSignInPath) return <RouteTransition path={currentPath}><Box component="main"><Header darkMode={darkMode} onToggleDarkMode={onToggleDarkMode} /><SignInPage mode="sign-in" /><Footer /></Box></RouteTransition>

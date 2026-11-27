@@ -78,7 +78,7 @@ interface StudentDashboardOverviewProps {
   readiness?: ReactNode
   onOpenCourse: (courseId: number) => void
   onOpenClass: (classId: number) => void
-  onSelectView: (view: 'calendar' | 'courses' | 'classes') => void
+  onSelectView: (view: 'calendar' | 'courses' | 'classes' | 'explore-courses') => void
   children: ReactNode
 }
 
@@ -161,8 +161,8 @@ const StudentDashboardOverview = ({ displayName, courses, classes, lessonCount, 
             </Stack>
             <LinearProgress variant="determinate" value={featuredLearning.progress} sx={{ height: 8, borderRadius: 5, bgcolor: 'rgba(255,255,255,.22)', '& .MuiLinearProgress-bar': { borderRadius: 5, bgcolor: '#b8f0d9' } }} />
           </Box>}
-          <Button variant="contained" endIcon={<PlayIcon className="h-6 w-6" />} onClick={() => featuredCourse ? onOpenCourse(featuredCourse.id) : featuredClass ? onOpenClass(featuredClass.id) : onSelectView('courses')} sx={{ mt: 2.5, borderRadius: 2.5, px: 2.25, color: '#12463e', bgcolor: '#fff', fontWeight: 800, boxShadow: 'none', '&:hover': { bgcolor: '#e8f8f2', boxShadow: 'none' } }}>
-            {featuredLearning ? featuredClass ? 'Continue class' : 'Continue learning' : 'Browse courses'}
+          <Button variant="contained" endIcon={<PlayIcon className="h-6 w-6" />} onClick={() => featuredCourse ? onOpenCourse(featuredCourse.id) : featuredClass ? onOpenClass(featuredClass.id) : onSelectView('explore-courses')} sx={{ mt: 2.5, borderRadius: 2.5, px: 2.25, color: '#12463e', bgcolor: '#fff', fontWeight: 800, boxShadow: 'none', '&:hover': { bgcolor: '#e8f8f2', boxShadow: 'none' } }}>
+            {featuredLearning ? featuredClass ? 'Continue class' : 'Continue learning' : 'Explore courses'}
           </Button>
         </Box>
         <Box sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'center' }, alignItems: 'center', minWidth: { md: 190 }, pr: { md: 2 } }}>

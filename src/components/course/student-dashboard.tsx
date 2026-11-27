@@ -112,7 +112,7 @@ import { calculateOverallGrade } from '@/lib/overall-grade'
   calendar: '/calendar',
   courses: '/enrollments',
   classes: '/classes',
-  'explore-courses': '/explore-courses',
+  'explore-courses': '/courses',
   'explore-classes': '/explore-classes',
   'study-planner': '/study-planner',
   quizzes: '/quizzes',
@@ -1055,7 +1055,7 @@ const CoursesView: FC<{ enrollments: DashboardEnrollment[]; completedLessons: Re
   useEffect(() => setPage(1), [courseEnrollments.length, normalizedQuery, categoryFilter])
 
   return <>
-    <ViewHeading title="My Courses" description="Build momentum with the self-paced courses in your learning plan." compact action={<Button variant="outlined" startIcon={<BookOpenIcon className="h-6 w-6" />} onClick={() => navigateTo('/explore-courses')}>Explore courses</Button>} />
+    <ViewHeading title="My Courses" description="Build momentum with the self-paced courses in your learning plan." compact action={<Button variant="outlined" startIcon={<BookOpenIcon className="h-6 w-6" />} onClick={() => navigateTo('/courses')}>Explore courses</Button>} />
     {courseEnrollments.length === 0 ? <EmptyState title="No courses yet" description="Your paid course enrollments will appear here." /> : <>
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} alignItems={{ xs: 'stretch', md: 'center' }} sx={{ mb: 2.5 }}>
         <TextField size="small" placeholder="Search my courses..." value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} inputProps={{ 'aria-label': 'Search my courses' }} InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" sx={{ color: 'text.secondary' }} /></InputAdornment> }} sx={{ flex: 1, minWidth: 0, backgroundColor: 'background.paper', '& .MuiOutlinedInput-root': { borderRadius: 2.5 } }} />

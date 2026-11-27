@@ -1,5 +1,7 @@
-import React, { FC, useState } from 'react'
+import React, { FC, useEffect, useState } from 'react'
 import Box from '@mui/material/Box'
+import Badge from '@mui/material/Badge'
+import ShoppingCartOutlinedIcon from '@mui/icons-material/ShoppingCartOutlined'
 import Container from '@mui/material/Container'
 import Link from '@mui/material/Link'
 import IconButton from '@mui/material/IconButton'
@@ -9,7 +11,7 @@ import { Logo } from '@/components/logo'
 import { Navigation, AuthNavigation } from '@/components/navigation'
 import { socialLinks } from '@/components/footer/footer-social-links'
 import { toast } from '@/components/toast'
-import { getAuthenticatedUser, signOut } from '@/services/api'
+import { getAuthenticatedUser, getCourseCartIds, signOut } from '@/services/api'
 import { navigateTo } from '@/lib/navigation'
 import { useTheme } from '@mui/material/styles'
 import { Close, DarkModeOutlined, LightModeOutlined, Menu } from '@mui/icons-material'
@@ -26,12 +28,19 @@ interface Props {
 
 const Header: FC<Props> = ({ darkMode, showSocialLinks = false, onToggleDarkMode }) => {
   const [visibleMenu, setVisibleMenu] = useState<boolean>(false)
+  const [cartCount, setCartCount] = useState(() => getCourseCartIds().length)
   const currentUser = getAuthenticatedUser()
   const isAdmin = currentUser?.role === 'admin'
   const isTutor = currentUser?.role === 'tutor'
   const isStudent = currentUser?.role === 'student'
   const { breakpoints } = useTheme()
   const matchMobileView = useMediaQuery(breakpoints.down('md'))
+
+  useEffect(() => {
+    const updateCartCount = () => setCartCount(getCourseCartIds().length)
+    window.addEventListener('course-cart-change', updateCartCount)
+    return () => window.removeEventListener('course-cart-change', updateCartCount)
+  }, [])
 
   const closeMenu = () => setVisibleMenu(false)
   const withCloseMenu = (action: () => void) => () => {
@@ -89,7 +98,8 @@ const Header: FC<Props> = ({ darkMode, showSocialLinks = false, onToggleDarkMode
                   {darkMode ? <LightModeOutlined sx={{ color: '#fff' }} /> : <DarkModeOutlined />}
                 </IconButton>
               </Tooltip>
-              <AuthNavigation isAdmin={isAdmin} isTutor={isTutor} isStudent={isStudent} darkMode={darkMode} onSignIn={withCloseMenu(() => navigateTo('/sign-in'))} onAdminDashboard={withCloseMenu(() => navigateTo('/admin'))} onTutorDashboard={withCloseMenu(() => navigateTo('/tutor'))} onStudentDashboard={withCloseMenu(() => navigateTo('/dashboard'))} onSignOut={withCloseMenu(() => { void signOut().then(() => { toast.add({ title: 'Signed out', description: 'You have been successfully logged out.', type: 'success' }); navigateTo('/', true) }) })} />
+              <IconButton aria-label={`Shopping cart, ${cartCount} items`} onClick={withCloseMenu(() => navigateTo('/cart'))} sx={{ color: 'primary.main' }}><Badge badgeContent={cartCount} color="primary"><ShoppingCartOutlinedIcon /></Badge></IconButton>
+              <AuthNavigation isAdmin={isAdmin} isTutor={isTutor} isStudent={isStudent} studentName={currentUser?.name} darkMode={darkMode} onSignIn={withCloseMenu(() => navigateTo('/sign-in'))} onAdminDashboard={withCloseMenu(() => navigateTo('/admin'))} onTutorDashboard={withCloseMenu(() => navigateTo('/tutor'))} onStudentDashboard={withCloseMenu(() => navigateTo('/dashboard'))} onSignOut={withCloseMenu(() => { void signOut().then(() => { toast.add({ title: 'Signed out', description: 'You have been successfully logged out.', type: 'success' }); navigateTo('/', true) }) })} />
             </Box>
             {visibleMenu && matchMobileView && (
               <IconButton

@@ -19,11 +19,12 @@ import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import FormatListNumberedOutlinedIcon from '@mui/icons-material/FormatListNumberedOutlined'
 import { type FC, useEffect, useState } from 'react'
+import AddShoppingCartOutlinedIcon from '@mui/icons-material/AddShoppingCartOutlined'
+import ShoppingCartOutlinedIcon from '@mui/icons-material/ShoppingCartOutlined'
+import { getAuthenticatedUser, getCourseCartIds, getMyEnrollments, getMyPayments, getAdminCourse, getCourse as getCourseFromApi, saveCourseCartIds } from '@/services/api'
 import { type AdminCourse, type AdminLesson } from '@/components/admin/admin-data'
-import EnrollmentModal from '@/components/course/enrollment-modal'
 import CourseReviews from '@/components/course/course-reviews'
 import Footer from '@/components/footer/footer'
-import { getAuthenticatedUser, getAdminCourse, getCourse as getCourseFromApi } from '@/services/api'
 import { navigateTo } from '@/lib/navigation'
 
 const formatDuration = (seconds: number) => {
@@ -54,8 +55,11 @@ const CourseDetailPage: FC<{ courseId: string }> = ({ courseId }) => {
   const [course, setCourse] = useState<AdminCourse | null>(null)
   const [expandedModules, setExpandedModules] = useState<number[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [isEnrollmentOpen, setIsEnrollmentOpen] = useState(false)
+  const [isInCart, setIsInCart] = useState(() => getCourseCartIds().includes(Number(courseId)))
+  const [hasAccess, setHasAccess] = useState(false)
+  const [isPaymentPending, setIsPaymentPending] = useState(false)
   const isAdmin = getAuthenticatedUser()?.role === 'admin'
+  const user = getAuthenticatedUser()
 
   useEffect(() => {
     let isCurrent = true
@@ -72,6 +76,25 @@ const CourseDetailPage: FC<{ courseId: string }> = ({ courseId }) => {
     })
     return () => { isCurrent = false }
   }, [courseId, isAdmin])
+
+  useEffect(() => {
+    const updateCart = () => setIsInCart(getCourseCartIds().includes(Number(courseId)))
+    updateCart()
+    window.addEventListener('course-cart-change', updateCart)
+    return () => window.removeEventListener('course-cart-change', updateCart)
+  }, [courseId])
+
+  useEffect(() => {
+    if (user?.role !== 'student') return
+    let active = true
+    Promise.all([getMyEnrollments(), getMyPayments()]).then(([enrollments, payments]) => {
+      if (!active) return
+      const id = Number(courseId)
+      setHasAccess(enrollments.some((enrollment) => enrollment.courseId === id && enrollment.classId === null))
+      setIsPaymentPending(payments.some((payment) => payment.status === 'Pending Verification' && (payment.courseId === id || payment.items?.some((item) => item.courseId === id && !item.removed))))
+    }).catch(() => undefined)
+    return () => { active = false }
+  }, [courseId, user?.role])
 
   if (isLoading && !course) return <Container maxWidth="lg" sx={{ py: 12, textAlign: 'center' }}><Typography variant="h4">Loading course...</Typography></Container>
   if (!course) return <Container maxWidth="lg" sx={{ py: 12, textAlign: 'center' }}><Typography variant="h4" sx={{ mb: 1 }}>Course not found</Typography><Typography color="text.secondary" sx={{ mb: 3 }}>This course may have been removed or is not available yet.</Typography><Button variant="contained" onClick={() => navigateTo('/')}>Back to courses</Button></Container>
@@ -121,12 +144,13 @@ const CourseDetailPage: FC<{ courseId: string }> = ({ courseId }) => {
             <Stack direction="row" spacing={1} alignItems="center"><WorkspacePremiumOutlinedIcon /><Typography sx={{ fontSize: 13 }}>{course.certificate ? 'Certificate of completion' : 'No certificate included'}</Typography></Stack>
             <Stack direction="row" spacing={1} alignItems="center"><SchoolOutlinedIcon /><Typography sx={{ fontSize: 13 }}>Lifetime access</Typography></Stack>
           </Stack>
-          <Box sx={{ mt: 3, width: '100%', '& > button': { width: '100%', justifyContent: 'space-between' } }}><StyledButton animated size="large" onClick={() => setIsEnrollmentOpen(true)}>Enroll Now</StyledButton></Box>
+          <Box sx={{ mt: 3, width: '100%', '& > button': { width: '100%', justifyContent: 'space-between' } }}>
+            {hasAccess ? <StyledButton animated size="large" onClick={() => navigateTo(`/account/courses/${course.id}`)}>Go to course <PlayCircleOutlineIcon /></StyledButton> : isPaymentPending ? <Button fullWidth variant="outlined" size="large" disabled>Pending verification</Button> : isInCart ? <StyledButton animated size="large" onClick={() => navigateTo('/cart')}>Go to cart <ShoppingCartOutlinedIcon /></StyledButton> : <StyledButton animated size="large" onClick={() => void saveCourseCartIds([...getCourseCartIds(), Number(course.id)])}>Add to cart <AddShoppingCartOutlinedIcon /></StyledButton>}
+          </Box>
         </Box>
       </Box>
     </Container>
-    <Box sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? theme.palette.background.default : '#fff', py: { xs: 6, md: 10 }, px: 3 }}><Box sx={{ maxWidth: 1140, mx: 'auto', px: 3, py: { xs: 6, md: 9 }, borderRadius: '26px', textAlign: 'center', background: (theme) => `radial-gradient(ellipse at bottom, ${theme.palette.primary.light} 0%, ${theme.palette.background.paper} 75%)` }}><Typography component="h2" sx={{ fontSize: { xs: 28, md: 38 }, fontWeight: 700, letterSpacing: '-0.04em', lineHeight: 1.2 }}>Start Your Learning Journey Today</Typography><Typography sx={{ color: (theme) => theme.palette.mode === 'dark' ? theme.palette.text.secondary : '#696d80', fontSize: 14, lineHeight: 1.6, mt: 1.5 }}>Gain new skills, explore creative fields, and achieve<br /> your career goals — all in one platform.</Typography><Stack direction="row" justifyContent="center" spacing={1.5} sx={{ mt: 3 }}><StyledButton animated onClick={() => navigateTo('/')}>Browse Courses</StyledButton><StyledButton animated onClick={() => setIsEnrollmentOpen(true)}>Get Started</StyledButton></Stack></Box></Box>
-    <EnrollmentModal course={course} open={isEnrollmentOpen} onClose={() => setIsEnrollmentOpen(false)} />
+    <Box sx={{ bgcolor: (theme) => theme.palette.mode === 'dark' ? theme.palette.background.default : '#fff', py: { xs: 6, md: 10 }, px: 3 }}><Box sx={{ maxWidth: 1140, mx: 'auto', px: 3, py: { xs: 6, md: 9 }, borderRadius: '26px', textAlign: 'center', background: (theme) => `radial-gradient(ellipse at bottom, ${theme.palette.primary.light} 0%, ${theme.palette.background.paper} 75%)` }}><Typography component="h2" sx={{ fontSize: { xs: 28, md: 38 }, fontWeight: 700, letterSpacing: '-0.04em', lineHeight: 1.2 }}>Start Your Learning Journey Today</Typography><Typography sx={{ color: (theme) => theme.palette.mode === 'dark' ? theme.palette.text.secondary : '#696d80', fontSize: 14, lineHeight: 1.6, mt: 1.5 }}>Gain new skills, explore creative fields, and achieve<br /> your career goals — all in one platform.</Typography><Stack direction="row" justifyContent="center" spacing={1.5} sx={{ mt: 3 }}><StyledButton animated onClick={() => navigateTo('/courses')}>Browse Courses</StyledButton></Stack></Box></Box>
     <Footer />
   </Box>
 }

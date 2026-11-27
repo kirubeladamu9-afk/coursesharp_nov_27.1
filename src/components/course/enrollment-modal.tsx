@@ -45,6 +45,7 @@ import { navigateTo } from '@/lib/navigation'
 interface EnrollmentModalProps {
   course: Pick<AdminCourse, 'id' | 'title' | 'price'>
   classId?: number | null
+  initialItems?: Array<{ target: EnrollmentOrderTarget; title: string }>
   open: boolean
   onClose: () => void
   onSubmitted?: () => void
@@ -142,7 +143,7 @@ const readFileAsDataUrl = (file: File) => new Promise<string>((resolve, reject) 
   reader.readAsDataURL(file)
 })
 
-const EnrollmentModal: FC<EnrollmentModalProps> = ({ course, classId = null, open, onClose, onSubmitted }) => {
+const EnrollmentModal: FC<EnrollmentModalProps> = ({ course, classId = null, initialItems, open, onClose, onSubmitted }) => {
   const [activeStep, setActiveStep] = useState(0)
   const [accountError, setAccountError] = useState<string | null>(null)
   const [paymentError, setPaymentError] = useState<string | null>(null)
@@ -218,7 +219,7 @@ const EnrollmentModal: FC<EnrollmentModalProps> = ({ course, classId = null, ope
     const user = getAuthenticatedUser()
     setIsAuthenticated(Boolean(user))
     setContact({ name: user?.name ?? '', email: user?.email ?? '', phone: user?.phone ?? '' })
-    setActiveStep(0)
+    setActiveStep(user ? 2 : 0)
     setAccountError(null)
     setPaymentError(null)
     setPaymentInfo(null)
@@ -236,10 +237,10 @@ const EnrollmentModal: FC<EnrollmentModalProps> = ({ course, classId = null, ope
     setVerificationNotice(null)
     setResendAvailableAt(0)
     const initialTarget: EnrollmentOrderTarget = classId === null ? { courseId: Number(course.id) } : { classId }
-    setCartItems([{ target: initialTarget, title: course.title }])
+    setCartItems(initialItems?.length ? initialItems : [{ target: initialTarget, title: course.title }])
     setCatalogOpen(false)
     return () => { current = false }
-  }, [classId, course.id, course.title, open])
+  }, [classId, course.id, course.title, initialItems, open])
 
   useEffect(() => {
     if (!open || cartItems.length === 0) return
@@ -441,12 +442,12 @@ const EnrollmentModal: FC<EnrollmentModalProps> = ({ course, classId = null, ope
       <Box sx={{ p: { xs: 2, sm: 2.5 }, border: 1, borderColor: '#CDE7E1', borderRadius: '16px', bgcolor: '#F2FAF8' }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
           <Box><Typography variant="h6" sx={{ fontWeight: 750, color: navy }}>Order items</Typography><Typography variant="body2" color="text.secondary">Prices are confirmed by the server.</Typography></Box>
-          <Button variant="outlined" startIcon={<AddIcon />} disabled={cartItems.length >= 10 || isSubmittingPayment} onClick={() => setCatalogOpen(true)} sx={{ borderRadius: 2, textTransform: 'none', color: primary, borderColor: primary }}>{cartItems.length >= 10 ? 'Cart full' : 'Add item'}</Button>
+          {!initialItems && <Button variant="outlined" startIcon={<AddIcon />} disabled={cartItems.length >= 10 || isSubmittingPayment} onClick={() => setCatalogOpen(true)} sx={{ borderRadius: 2, textTransform: 'none', color: primary, borderColor: primary }}>{cartItems.length >= 10 ? 'Cart full' : 'Add item'}</Button>}
         </Stack>
         <Stack spacing={1}>
           {paymentInfo.items.map((item, index) => <Box key={`${item.courseId ?? 'course'}-${item.classId ?? 'class'}`} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, p: 1.25, bgcolor: '#fff', borderRadius: 2 }}>
             <Box sx={{ minWidth: 0 }}><Typography sx={{ fontWeight: 650, color: navy, overflowWrap: 'anywhere' }}>{item.title}</Typography><Typography variant="caption" color="text.secondary">{item.classId === null ? 'Course' : 'Class'}</Typography></Box>
-            <Stack direction="row" spacing={1} alignItems="center"><Typography sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{paymentInfo.currency} {item.amount.toFixed(2)}</Typography><IconButton aria-label={`Remove ${item.title} from order`} disabled={cartItems.length <= 1 || isSubmittingPayment} onClick={() => removeCartItem(index)} size="small"><DeleteOutlineIcon /></IconButton></Stack>
+            <Stack direction="row" spacing={1} alignItems="center"><Typography sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{paymentInfo.currency} {item.amount.toFixed(2)}</Typography>{!initialItems && <IconButton aria-label={`Remove ${item.title} from order`} disabled={cartItems.length <= 1 || isSubmittingPayment} onClick={() => removeCartItem(index)} size="small"><DeleteOutlineIcon /></IconButton>}</Stack>
           </Box>)}
         </Stack>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1.5, pt: 1.5, borderTop: 1, borderColor: '#CDE7E1' }}><Typography sx={{ fontWeight: 700 }}>Order total</Typography><Typography variant="h5" sx={{ color: primary, fontWeight: 800 }}>{paymentInfo.currency} {paymentInfo.amount.toFixed(2)}</Typography></Box>
@@ -512,7 +513,7 @@ const EnrollmentModal: FC<EnrollmentModalProps> = ({ course, classId = null, ope
           {proofFile && <Typography variant="body2" sx={{ color: '#047857', overflowWrap: 'anywhere' }}>Attached: {proofFile.name}</Typography>}
           {paymentError && <Alert severity="error">{paymentError}</Alert>}
           <Stack direction={{ xs: 'column-reverse', sm: 'row' }} spacing={1.5} sx={{ pt: 1, borderTop: 1, borderColor: hairline }}>
-            <Button fullWidth variant="outlined" size="large" onClick={() => setActiveStep(0)} disabled={isSubmittingPayment} sx={secondaryButtonSx}>Back</Button>
+            {!isAuthenticated && <Button fullWidth variant="outlined" size="large" onClick={() => setActiveStep(0)} disabled={isSubmittingPayment} sx={secondaryButtonSx}>Back</Button>}
             <Button fullWidth type="submit" variant="contained" size="large" disabled={!paymentInfo.configured || !proofFile || isSubmittingPayment} sx={primaryButtonSx}>
               {isSubmittingPayment ? 'Submitting...' : 'Submit for Verification'}
             </Button>
@@ -536,8 +537,8 @@ const EnrollmentModal: FC<EnrollmentModalProps> = ({ course, classId = null, ope
       </Box>
     </DialogTitle>
     <DialogContent sx={{ px: { xs: 2.5, sm: 4 }, pt: { xs: 3, sm: 3.5 }, pb: { xs: 3, sm: 4 }, overflowY: 'auto' }}>
-      {!submitted && <Stepper activeStep={activeStep} alternativeLabel sx={stepperSx}>
-        {steps.map((label, index) => <Step key={label} completed={index < activeStep}><StepLabel StepIconComponent={StepBadge}>{label}</StepLabel></Step>)}
+      {!submitted && <Stepper activeStep={isAuthenticated ? 0 : activeStep} alternativeLabel sx={stepperSx}>
+        {(isAuthenticated ? ['Payment'] : steps).map((label, index) => <Step key={label} completed={!isAuthenticated && index < activeStep}><StepLabel StepIconComponent={StepBadge}>{label}</StepLabel></Step>)}
       </Stepper>}
       {submitted ? renderConfirmation() : activeStep === 0 ? renderPersonalInfo() : activeStep === 1 ? renderVerifyEmail() : renderPaymentInfo()}
     </DialogContent>
