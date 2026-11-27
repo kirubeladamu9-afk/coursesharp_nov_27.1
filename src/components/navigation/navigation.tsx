@@ -4,6 +4,7 @@ import Box from '@mui/material/Box'
 import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
+import { useTheme } from '@mui/material/styles'
 import { Link as ScrollLink } from 'react-scroll'
 import { navigateTo } from '@/lib/navigation'
 import { navigations } from './navigation.data'
@@ -16,6 +17,7 @@ interface Props {
 }
 
 const Navigation: FC<Props> = ({ isAdmin = false, onNavigate }) => {
+  const darkMode = useTheme().palette.mode === 'dark'
   const [programsAnchor, setProgramsAnchor] = useState<HTMLElement | null>(null)
   const programsCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [activeDestination, setActiveDestination] = useState(() => navigations.find(({ path }) => path.startsWith('/') && window.location.pathname.startsWith(path))?.path ?? 'hero')
@@ -52,9 +54,10 @@ const Navigation: FC<Props> = ({ isAdmin = false, onNavigate }) => {
   }
 
   const headlineCurve = <Box aria-hidden="true" sx={{ position: 'absolute', top: 22, left: '50%', width: 44, transform: 'translateX(-50%) rotate(3deg)', '& img': { display: 'block', width: 44, height: 'auto' } }}><img src="/images/headline-curve.svg" alt="" /></Box>
+  const navActiveColor = darkMode ? '#fff' : 'primary.main'
   const linkSx = {
     position: 'relative',
-    color: 'text.disabled',
+    color: darkMode ? '#fff' : 'text.disabled',
     textDecoration: 'none',
     cursor: 'pointer',
     fontWeight: 600,
@@ -65,8 +68,8 @@ const Navigation: FC<Props> = ({ isAdmin = false, onNavigate }) => {
     mb: { xs: 3, md: 0 },
     fontSize: { xs: '1.2rem', md: 'inherit' },
     '& > div': { display: 'none' },
-    '&.current': { color: 'primary.main', '&>div': { display: 'block' } },
-    '&:hover': { color: 'primary.main' },
+    '&.current': { color: navActiveColor, '&>div': { display: 'block' } },
+    '&:hover': { color: navActiveColor },
   }
 
   const renderDestination = ({ path: destination, label }: typeof primaryDestinations[number]) => {
@@ -88,8 +91,8 @@ const Navigation: FC<Props> = ({ isAdmin = false, onNavigate }) => {
           })}
       sx={{
         ...linkSx,
-        ...(destination === 'hero' && { color: 'primary.main' }),
-        ...(activeDestination === destination && { color: 'primary.main', '&>div': { display: 'block' } }),
+        ...(destination === 'hero' && { color: navActiveColor }),
+        ...(activeDestination === destination && { color: navActiveColor, '&>div': { display: 'block' } }),
       }}
     >
       {headlineCurve}
@@ -114,13 +117,13 @@ const Navigation: FC<Props> = ({ isAdmin = false, onNavigate }) => {
             background: 'none',
             p: 0,
             mb: 0,
-            color: programsActive || programsOpen ? 'primary.main' : 'text.disabled',
+            color: programsActive || programsOpen || darkMode ? navActiveColor : 'text.disabled',
             '& > div': { display: programsActive || programsOpen ? 'block' : 'none' },
           }}
         >
           {headlineCurve}
           Programs
-          <KeyboardArrowDownIcon sx={{ ml: 0.5, flexShrink: 0, fontSize: '1.25rem', color: 'primary.main', transition: 'transform 150ms', transform: programsOpen ? 'rotate(180deg)' : 'none' }} />
+          <KeyboardArrowDownIcon sx={{ ml: 0.5, flexShrink: 0, fontSize: '1.25rem', color: darkMode ? '#fff' : 'primary.main', transition: 'transform 150ms', transform: programsOpen ? 'rotate(180deg)' : 'none' }} />
         </Box>
         <Menu
           anchorEl={programsAnchor}
@@ -143,6 +146,7 @@ const Navigation: FC<Props> = ({ isAdmin = false, onNavigate }) => {
               component="a"
               href={destinationHref}
               className="min-h-11 !rounded-xl px-4 py-3 text-sm transition-colors"
+              sx={darkMode ? { color: '#fff' } : undefined}
               onClick={(event) => {
                 if (isRoute) handleDestinationClick(destination, event)
                 else {
