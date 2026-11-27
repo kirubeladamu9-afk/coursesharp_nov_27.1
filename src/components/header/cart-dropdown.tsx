@@ -24,7 +24,7 @@ const CartDropdown: FC<{ onNavigate?: () => void }> = ({ onNavigate }) => {
 
   return (
     <div className="group relative">
-      <button type="button" aria-label={`Shopping cart, ${ids.length} items`} onClick={go} className="relative flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-[var(--mui-palette-primary-main,#127C71)] transition hover:bg-slate-500/10">
+      <button type="button" aria-label={`Shopping cart, ${ids.length} items`} onClick={go} className="relative flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-[var(--mui-palette-primary-main,#127C71)] transition hover:bg-slate-500/10 [[data-theme=dark]_&]:text-white">
         <ShoppingCartOutlinedIcon />
         {ids.length > 0 && <span className="absolute right-0 top-0 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#127C71] px-1 text-[11px] font-bold text-white">{ids.length}</span>}
       </button>
