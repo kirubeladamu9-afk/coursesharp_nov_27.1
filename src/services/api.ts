@@ -143,6 +143,8 @@ interface EnrollmentLesson {
   baseImageUrl?: string
   interactiveHotspots?: Array<{ id: number; left: string; top: string; label: string; explanation: string }>
   simulation?: SimulationConfig
+  simulationLab?: boolean
+  simulationToolId?: string
   stepByStepSolver?: StepByStepSolverLearnerConfig
   platformEngineId?: string
   curriculumTopic?: string
