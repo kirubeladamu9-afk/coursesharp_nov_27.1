@@ -1,3 +1,4 @@
+import { monoFontFamily } from '@/config/theme/typography'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Paper from '@mui/material/Paper'
@@ -54,7 +55,7 @@ const SequenceBuilderActivity: FC<Props> = ({ topic, onComplete }) => {
       {config.mode === 'rule' && <TextField label="Rule (for example: add 4)" value={ruleAnswer} onChange={(event) => { setRuleAnswer(event.target.value); setChecked(false) }} placeholder="add 4" />}
       {config.mode === 'nth' && <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}><TextField label="nth-term formula" value={formulaAnswer} onChange={(event) => { setFormulaAnswer(event.target.value); setChecked(false) }} placeholder="3n − 1" /><TextField label={`Term ${config.targetN}`} type="number" value={numberAnswer} onChange={(event) => { setNumberAnswer(event.target.value); setChecked(false) }} placeholder="?" /></Stack>}
       {config.mode === 'series' && <TextField label="Sum of the first 4 terms" type="number" value={numberAnswer} onChange={(event) => { setNumberAnswer(event.target.value); setChecked(false) }} placeholder="?" />}
-      <Typography variant="body2" sx={{ textAlign: 'center', fontFamily: 'monospace' }}>{config.mode === 'series' ? `${config.terms.join(' + ')} = ?` : config.mode === 'nth' ? `aₙ = ? · term ${config.targetN} = ?` : config.rule}</Typography>
+      <Typography variant="body2" sx={{ textAlign: 'center', fontFamily: monoFontFamily }}>{config.mode === 'series' ? `${config.terms.join(' + ')} = ?` : config.mode === 'nth' ? `aₙ = ? · term ${config.targetN} = ?` : config.rule}</Typography>
       <Stack direction="row" spacing={1} justifyContent="center"><Button variant="outlined" onClick={reset}>Reset</Button><Button variant="contained" onClick={() => setChecked(true)} disabled={config.mode === 'fill' ? !allFilled : config.mode === 'rule' ? !ruleAnswer : config.mode === 'nth' ? !formulaAnswer || !numberAnswer : !numberAnswer}>Check Activity</Button></Stack>
       {checked && <Paper role="status" elevation={0} sx={{ p: 1.5, border: 1, borderColor: correct ? 'success.main' : 'error.main', backgroundColor: correct ? 'success.light' : 'error.light' }}><Typography color={correct ? 'success.dark' : 'error.dark'} sx={{ fontWeight: 800 }}>{correct ? `Correct! ${config.rule}` : config.mode === 'fill' ? 'Subtract the first term from the second — is the gap the same every time?' : 'Study the sequence and try the rule again.'}</Typography></Paper>}
       <Button variant="contained" disabled={!correct || completed} onClick={() => { setCompleted(true); onComplete?.() }} startIcon={<CheckCircleOutlineIcon />} sx={{ alignSelf: 'flex-start' }}>{completed ? 'Completed' : 'Complete activity'}</Button>

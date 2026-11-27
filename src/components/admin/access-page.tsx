@@ -1,3 +1,4 @@
+import { monoFontFamily } from '@/config/theme/typography'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -300,7 +301,7 @@ const CopyField: FC<{ label: string; value: string }> = ({ label, value }) => {
     <Box sx={{ p: 1.5, border: 1, borderColor: 'divider', borderRadius: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Typography variant="caption" color="text.secondary">{label}</Typography>
-        <Typography sx={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>{value}</Typography>
+        <Typography sx={{ fontFamily: monoFontFamily, wordBreak: 'break-all' }}>{value}</Typography>
       </Box>
       <Button size="small" onClick={() => void copy()}>{copied ? 'Copied' : 'Copy'}</Button>
     </Box>

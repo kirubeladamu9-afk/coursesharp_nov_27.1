@@ -1,3 +1,4 @@
+import { monoFontFamily } from '@/config/theme/typography'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
@@ -140,7 +141,7 @@ const TenFrameBuilderActivity: FC<TenFrameBuilderActivityProps> = ({ topic, onCo
       ? <Typography sx={{ fontWeight: 700 }}>Removed: {removedCount} · Remaining: {placedFirst}</Typography>
       : <>
         <Typography variant="body2" color="text.secondary">Counters on the frame: {placedFirst + placedSecond}</Typography>
-        <Typography variant="h5" sx={{ fontFamily: 'monospace' }}>{placedFirst} + {placedSecond} = {placedFirst + placedSecond}</Typography>
+        <Typography variant="h5" sx={{ fontFamily: monoFontFamily }}>{placedFirst} + {placedSecond} = {placedFirst + placedSecond}</Typography>
         <ToggleButtonGroup exclusive size="small" value={placing} onChange={(_, next: 'first' | 'second' | null) => next && setSession((current) => ({ ...current, placing: next }))} aria-label="Counter color">
           <ToggleButton value="first"><Box component="span" sx={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: COUNTER_COLORS.first, mr: 1 }} />Place {problem.first}</ToggleButton>
           <ToggleButton value="second"><Box component="span" sx={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: COUNTER_COLORS.second, mr: 1 }} />Place {problem.second}</ToggleButton>
@@ -169,7 +170,7 @@ const TenFrameBuilderActivity: FC<TenFrameBuilderActivityProps> = ({ topic, onCo
       <Button variant="outlined" disabled={locked || position <= 0} onClick={() => moveHop(-1)}>Backward −1</Button>
       <Button variant="contained" disabled={locked || position >= LINE_MAX} onClick={() => moveHop(1)}>Forward +1</Button>
     </Stack>
-    <Typography variant="h5" sx={{ fontFamily: 'monospace' }}>
+    <Typography variant="h5" sx={{ fontFamily: monoFontFamily }}>
       {[String(problem.first), lineHops.forward ? `+ ${lineHops.forward}` : '', lineHops.backward ? `− ${lineHops.backward}` : ''].filter(Boolean).join(' ')} = {position}
     </Typography>
   </Stack>
@@ -189,7 +190,7 @@ const TenFrameBuilderActivity: FC<TenFrameBuilderActivityProps> = ({ topic, onCo
         <ToggleButton value="ten-frame">Ten Frame</ToggleButton>
         <ToggleButton value="number-line">Number Line</ToggleButton>
       </ToggleButtonGroup>
-      <Typography variant="h4" sx={{ textAlign: 'center', fontFamily: 'monospace' }}>{problem.first} {symbol} {problem.second} = ?</Typography>
+      <Typography variant="h4" sx={{ textAlign: 'center', fontFamily: monoFontFamily }}>{problem.first} {symbol} {problem.second} = ?</Typography>
       {round.makeTen && <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>Make ten: fill the first frame to 10 before placing the rest.</Typography>}
       {round.predictFirst && <Typography variant="body2" color={locked ? 'warning.dark' : 'text.secondary'} sx={{ textAlign: 'center', fontWeight: locked ? 700 : 400 }}>
         {locked ? 'Predict first: type your answer to unlock the model.' : 'Prediction made. Use the model to check it.'}

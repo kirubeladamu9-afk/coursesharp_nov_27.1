@@ -1,3 +1,4 @@
+import { monoFontFamily } from '@/config/theme/typography'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
@@ -113,7 +114,7 @@ const NumberBalanceActivity: FC<NumberBalanceActivityProps> = ({ topic, onComple
         <Chip label={round.label} size="small" variant="outlined" />
       </Stack>
       <Typography variant="h6" sx={{ textAlign: 'center' }}>{prompt}</Typography>
-      {kind === 'compare' && <Typography variant="h4" sx={{ textAlign: 'center', fontFamily: 'monospace' }}>{pair.left} ? {pair.right}</Typography>}
+      {kind === 'compare' && <Typography variant="h4" sx={{ textAlign: 'center', fontFamily: monoFontFamily }}>{pair.left} ? {pair.right}</Typography>}
       <Box component="svg" viewBox="0 0 480 300" role="img" aria-label={`Seesaw with ${left} blocks on the left pan and ${right} blocks on the right pan`} sx={{ width: '100%', maxWidth: 560, height: 'auto', backgroundColor: 'background.default', borderRadius: 2 }}>
         <polygon points={`${PIVOT_X},${PIVOT_Y} ${PIVOT_X - 22},250 ${PIVOT_X + 22},250`} fill={BEAM_COLOR} />
         <rect x={PIVOT_X - 50} y={250} width={100} height={8} rx={4} fill={BEAM_COLOR} />

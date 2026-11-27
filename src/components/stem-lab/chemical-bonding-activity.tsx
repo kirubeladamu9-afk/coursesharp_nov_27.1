@@ -1,3 +1,4 @@
+import { fontFamily } from '@/config/theme/typography'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
@@ -138,7 +139,7 @@ const ChemicalBondingActivity: FC<{ onComplete?: () => void }> = ({ onComplete }
   const ionicPresetLabels = ['NaF', 'NaCl', 'Na₂O', 'MgCl₂', 'MgF₂', 'MgO']
   const metallicPresetLabels = ['Na alloy', 'Mg alloy', 'NaMg alloy']
 
-  return <Box sx={{ width: '100%', minHeight: 760, color: 'text.primary', backgroundColor: 'background.default', border: '1px solid', borderColor: 'divider', borderRadius: 2, p: { xs: 1, md: 1.5 }, overflow: 'hidden', fontFamily: 'Inter, sans-serif' }}>
+  return <Box sx={{ width: '100%', minHeight: 760, color: 'text.primary', backgroundColor: 'background.default', border: '1px solid', borderColor: 'divider', borderRadius: 2, p: { xs: 1, md: 1.5 }, overflow: 'hidden', fontFamily }}>
     <Stack direction={{ xs: 'column', lg: 'row' }} spacing={1} sx={{ minHeight: 730 }}>
       <Paper elevation={0} sx={{ width: { xs: '100%', lg: 250 }, flexShrink: 0, p: 1.25, backgroundColor: 'background.paper', border: '1px solid', borderColor: 'divider', color: 'inherit' }}>
         <Typography variant="subtitle2" sx={{ color: '#64e7c1', fontWeight: 800 }}>Build a Compound</Typography><Typography variant="caption" sx={{ display: 'block', color: 'text.secondary', mb: 1 }}>Select atoms, test a bond, then inspect live forces and electron sharing.</Typography>

@@ -1,3 +1,4 @@
+import { monoFontFamily } from '@/config/theme/typography'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Paper from '@mui/material/Paper'
@@ -81,7 +82,7 @@ const ProbabilityMachineActivity: FC<Props> = ({ topic, onComplete }) => {
         </Box>
         <Typography variant="caption" color="text.secondary">y-axis: number drawn · x-axis: color · Total draws: {totalDraws}</Typography>
       </Box>
-      <Typography role="status" sx={{ textAlign: 'center', fontFamily: 'monospace' }}>Drawn {config.target}: {draws[config.target]}/{totalDraws || 0} = {targetExperimentalPercent}% (expected {Math.round(theoreticalNumerator / totalBalls * 100)}%)</Typography>
+      <Typography role="status" sx={{ textAlign: 'center', fontFamily: monoFontFamily }}>Drawn {config.target}: {draws[config.target]}/{totalDraws || 0} = {targetExperimentalPercent}% (expected {Math.round(theoreticalNumerator / totalBalls * 100)}%)</Typography>
       <Stack direction="row" spacing={1} justifyContent="center" flexWrap="wrap"><Button variant="outlined" onClick={reset}>Reset</Button><Button variant="contained" onClick={() => setChecked(true)} disabled={!totalDraws}>Check Activity</Button></Stack>
       {checked && <Paper role="status" elevation={0} sx={{ p: 1.5, border: 1, borderColor: correct ? 'success.main' : 'error.main', backgroundColor: correct ? 'success.light' : 'error.light', animation: correct ? 'probabilityCelebrate .7s ease' : 'none', '@keyframes probabilityCelebrate': { '0%': { transform: 'scale(.98)' }, '60%': { transform: 'scale(1.02)' }, '100%': { transform: 'scale(1)' } } }}><Typography color={correct ? 'success.dark' : 'error.dark'} sx={{ fontWeight: 800 }}>{correct ? `Correct! P(${config.target}) = ${theoreticalFraction} = ${simplifiedFraction}, and your experiment came close at ${targetExperimentalPercent}%` : totalDraws < 20 ? `Draw at least ${20 - totalDraws} more balls before checking.` : predictionCorrect ? `Your experiment is ready, but check that the prediction uses ${theoreticalNumerator} ${config.target} balls out of ${totalBalls}.` : `Count the ${config.target} balls out of all ${totalBalls} balls in the bag.`}</Typography></Paper>}
       <Button variant="contained" disabled={!correct || completed} onClick={() => { setCompleted(true); onComplete?.() }} startIcon={<CheckCircleOutlineIcon />} sx={{ alignSelf: 'flex-start' }}>{completed ? 'Completed' : 'Complete activity'}</Button>

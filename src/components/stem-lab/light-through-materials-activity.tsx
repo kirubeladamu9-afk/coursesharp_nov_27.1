@@ -1,3 +1,4 @@
+import { monoFontFamily } from '@/config/theme/typography'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
@@ -132,7 +133,7 @@ const LightThroughMaterialsActivity: FC<LightThroughMaterialsProps> = ({ onCompl
       </Stack>
       <Paper elevation={0} sx={{ p: 1.5, backgroundColor: 'primary.light' }}>
         <Typography sx={{ fontWeight: 800 }}>Snell&apos;s law</Typography>
-        <Typography variant="body2" sx={{ fontFamily: 'monospace', mt: .5 }}>n₁ × sin(θ₁) = n₂ × sin(θ₂)</Typography>
+        <Typography variant="body2" sx={{ fontFamily: monoFontFamily, mt: .5 }}>n₁ × sin(θ₁) = n₂ × sin(θ₂)</Typography>
         <Typography variant="body2" sx={{ mt: .75 }}>1.000 × sin({incidentAngle.toFixed(1)}°) = {materialInfo.index.toFixed(3)} × sin({refractedAngle.toFixed(1)}°)</Typography>
       </Paper>
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} flexWrap="wrap" useFlexGap>

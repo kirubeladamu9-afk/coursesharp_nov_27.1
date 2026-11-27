@@ -8,7 +8,7 @@ import { type CodeToken, type CodeTokenKind, highlightCode, languageLabels, reso
 
 const codeFont = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace'
 
-export const articleProseSx = (theme: Theme) => ({ lineHeight: 2, '& p, & div': { mb: 3, fontSize: { xs: '1rem', md: '1.08rem' } }, '& h1, & h2, & h3, & h4, & h5, & h6': { mt: 4.5, mb: 2, fontWeight: 800, letterSpacing: '-0.02em' }, '& blockquote': { m: '24px 0', p: { xs: 2, sm: 2.5 }, borderLeft: 4, borderColor: 'warning.main', borderRadius: 1.5, backgroundColor: alpha(theme.palette.warning.main, theme.palette.mode === 'dark' ? 0.16 : 0.1), fontWeight: 600 }, '& ul, & ol': { pl: 3, mb: 3 }, '& li': { mb: 1 } })
+export const articleProseSx = (theme: Theme) => ({ lineHeight: 1.75, '& p, & div': { mb: 3, fontSize: '1.0625rem' }, '& h1, & h2, & h3, & h4, & h5, & h6': { mt: 4.5, mb: 2, fontWeight: 700, letterSpacing: '-0.02em' }, '& blockquote': { m: '24px 0', p: { xs: 2, sm: 2.5 }, borderLeft: 4, borderColor: 'warning.main', borderRadius: 1.5, backgroundColor: alpha(theme.palette.warning.main, theme.palette.mode === 'dark' ? 0.16 : 0.1), fontWeight: 600 }, '& ul, & ol': { pl: 3, mb: 3 }, '& li': { mb: 1 } })
 
 const tokenColors: Record<CodeTokenKind, string> = {
   plain: '#e2e8f0',

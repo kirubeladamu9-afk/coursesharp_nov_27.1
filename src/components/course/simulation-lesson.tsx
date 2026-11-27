@@ -1,3 +1,4 @@
+import { monoFontFamily } from '@/config/theme/typography'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
@@ -93,7 +94,7 @@ const SimulationLesson: FC<SimulationLessonProps> = ({ config, onValidated }) =>
       </Stack>
       <Paper elevation={0} sx={{ p: 2, backgroundColor: 'background.default', border: 1, borderColor: 'divider' }}>
         <Typography variant="body2" color="text.secondary">Calculation rule</Typography>
-        <Typography sx={{ fontFamily: 'monospace', mt: 0.5 }}>{config.calculation}</Typography>
+        <Typography sx={{ fontFamily: monoFontFamily, mt: 0.5 }}>{config.calculation}</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>{config.outputLabel}</Typography>
         <Typography variant="h4" color="primary.main">{output} {config.outputUnit}</Typography>
       </Paper>

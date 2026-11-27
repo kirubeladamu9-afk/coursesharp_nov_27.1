@@ -1,3 +1,5 @@
+import { fontFamily } from '@/config/theme/typography'
+import { monoFontFamily } from '@/config/theme/typography'
 import AddIcon from '@mui/icons-material/Add'
 import AddPhotoAlternateOutlinedIcon from '@mui/icons-material/AddPhotoAlternateOutlined'
 import CloseIcon from '@mui/icons-material/Close'
@@ -365,7 +367,7 @@ const ArticleBlockEditor: FC<Props> = ({ lesson, onChange, readImage }) => {
             p: { xs: 2, sm: 3.5, md: 5 },
             outline: 0,
             color: 'text.primary',
-            fontFamily: 'Arial, sans-serif',
+            fontFamily,
             fontSize: 15,
             lineHeight: 1.8,
             overflowWrap: 'anywhere',
@@ -378,7 +380,7 @@ const ArticleBlockEditor: FC<Props> = ({ lesson, onChange, readImage }) => {
             '& iframe': { width: '100%', maxWidth: 760, minHeight: 220, border: 0, borderRadius: 1.5, cursor: 'pointer' },
             '& table': { width: '100%', borderCollapse: 'collapse', my: 2 },
             '& td, & th': { minWidth: 80, border: 1, borderColor: 'divider', p: 1, textAlign: 'left' },
-            '& pre': { p: 2, overflowX: 'auto', borderRadius: 1.5, backgroundColor: 'action.hover', fontFamily: 'monospace', lineHeight: 1.5 },
+            '& pre': { p: 2, overflowX: 'auto', borderRadius: 1.5, backgroundColor: 'action.hover', fontFamily: monoFontFamily, lineHeight: 1.5 },
             '& blockquote': { mx: 0, my: 2, pl: 2, borderLeft: 3, borderColor: 'primary.main', color: 'text.secondary' },
             '& [data-checkpoint-id]': { my: 2, px: 2, py: 1.25, borderLeft: 4, borderColor: 'primary.main', borderRadius: 1.5, backgroundColor: 'action.hover', color: 'primary.dark', fontWeight: 700, fontSize: 14, cursor: 'pointer', userSelect: 'none' },
           }}

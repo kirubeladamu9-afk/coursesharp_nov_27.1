@@ -1,3 +1,4 @@
+import { monoFontFamily } from '@/config/theme/typography'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Paper from '@mui/material/Paper'
@@ -59,7 +60,7 @@ const PercentageBatteryActivity: FC<Props> = ({ topic, onComplete }) => {
         </Box>
         <Stack spacing={1} sx={{ minWidth: { md: 170 } }}>
           <Typography variant="h4" color={correct ? 'success.main' : 'primary.main'} sx={{ fontWeight: 800 }}>{count}% charged</Typography>
-          <Typography variant="h6" sx={{ fontFamily: 'monospace' }}>{count}/100</Typography>
+          <Typography variant="h6" sx={{ fontFamily: monoFontFamily }}>{count}/100</Typography>
           <Typography variant="body2" color="text.secondary">Target: <strong>{target}%</strong></Typography>
           <Typography variant="body2" color="text.secondary">Click squares, or click and drag to paint. Click a charged square again to empty it.</Typography>
         </Stack>
