@@ -13,6 +13,31 @@ interface Props {
   onToggleDarkMode: () => void
 }
 
+const CartSkeleton = ({ rows }: { rows: number }) => (
+  <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_320px]" aria-busy="true" aria-label="Loading your cart">
+    <section>
+      <div className="mb-3 h-4 w-40 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+      <ul className="m-0 list-none divide-y divide-slate-200 border-y border-slate-200 p-0 dark:divide-slate-700 dark:border-slate-700">
+        {Array.from({ length: rows }, (_, index) => (
+          <li key={index} className="flex items-center gap-4 py-5">
+            <div className="h-20 w-32 shrink-0 animate-pulse rounded-xl bg-slate-200 sm:h-24 sm:w-40 dark:bg-slate-700" />
+            <div className="flex-1 space-y-3">
+              <div className="h-4 w-3/4 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+              <div className="h-3 w-1/3 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+            </div>
+            <div className="h-5 w-16 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+          </li>
+        ))}
+      </ul>
+    </section>
+    <aside className="h-fit rounded-3xl border border-slate-200 p-6 dark:border-slate-700">
+      <div className="h-4 w-16 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+      <div className="mt-3 h-10 w-32 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+      <div className="mt-5 h-12 w-full animate-pulse rounded-xl bg-slate-200 dark:bg-slate-700" />
+    </aside>
+  </div>
+)
+
 const CourseCartPage: React.FC<Props> = ({ darkMode, onToggleDarkMode }) => {
   const [courses, setCourses] = useState<Course[]>([])
   const [cartIds, setCartIds] = useState<number[]>(getCourseCartIds())
@@ -72,7 +97,7 @@ const CourseCartPage: React.FC<Props> = ({ darkMode, onToggleDarkMode }) => {
     <main className="mx-auto min-h-[65vh] max-w-6xl px-4 py-10 md:py-14">
       <h1 className="m-0 text-3xl font-extrabold tracking-tight md:text-4xl">Shopping Cart</h1>
       {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
-      {isLoading ? <p className="mt-6 text-slate-500">Loading your cart…</p> : cartCourses.length === 0 ? <div className="mt-8 rounded-3xl border border-slate-200 p-10 text-center dark:border-slate-700">
+      {isLoading ? <CartSkeleton rows={Math.max(cartIds.length, 1)} /> : cartCourses.length === 0 ? <div className="mt-8 rounded-3xl border border-slate-200 p-10 text-center dark:border-slate-700">
         <p className="m-0 text-lg font-bold">Your cart is empty</p>
         <p className="mb-5 mt-1 text-slate-500">Explore the catalog and add a course when you find the right fit.</p>
         <button type="button" onClick={() => navigateTo('/courses')} className="cursor-pointer rounded-xl border-0 bg-[#127C71] px-6 py-3 font-bold text-white transition hover:bg-[#0D6A69]">Explore courses</button>
