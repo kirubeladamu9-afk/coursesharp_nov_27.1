@@ -25,6 +25,8 @@ const Root = () => {
   useEffect(() => {
     document.documentElement.dataset.theme = darkMode ? 'dark' : 'light'
     window.localStorage.setItem('color-mode', darkMode ? 'dark' : 'light')
+    const appleTouchIcon = document.querySelector<HTMLLinkElement>('link[rel="apple-touch-icon"]')
+    if (appleTouchIcon) appleTouchIcon.href = darkMode ? '/brand/apple-touch-icon-dark-180x180.webp' : '/brand/apple-touch-icon-180x180.png'
   }, [darkMode])
 
   return (

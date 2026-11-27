@@ -1,5 +1,6 @@
 import React, { FC } from 'react'
 import { Box } from '@mui/material'
+import { useTheme } from '@mui/material/styles'
 
 interface Props {
   onClick?: () => void
@@ -7,6 +8,11 @@ interface Props {
 }
 
 const Logo: FC<Props> = ({ onClick, compact = false }) => {
+  const darkMode = useTheme().palette.mode === 'dark'
+  const src = compact
+    ? darkMode ? '/brand/coursesharp-dark-icon-40x40.webp' : '/brand/coursesharp-icon-40x40.png'
+    : darkMode ? '/brand/coursesharp-dark-wordmark-540x120.webp' : '/brand/coursesharp-wordmark-540x120.png'
+
   return (
     <Box
       component="a"
@@ -21,7 +27,7 @@ const Logo: FC<Props> = ({ onClick, compact = false }) => {
     >
       <Box
         component="img"
-        src={compact ? '/brand/coursesharp-icon-40x40.png' : '/brand/coursesharp-wordmark-540x120.png'}
+        src={src}
         alt=""
         sx={
           compact
