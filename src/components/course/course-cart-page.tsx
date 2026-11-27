@@ -72,7 +72,7 @@ const CourseCartPage: React.FC<Props> = ({ darkMode, onToggleDarkMode }) => {
       {isLoading ? <p className="mt-6 text-slate-500">Loading your cart…</p> : cartCourses.length === 0 ? <div className="mt-8 rounded-3xl border border-slate-200 p-10 text-center dark:border-slate-700">
         <p className="m-0 text-lg font-bold">Your cart is empty</p>
         <p className="mb-5 mt-1 text-slate-500">Explore the catalog and add a course when you find the right fit.</p>
-        <button type="button" onClick={() => navigateTo('/courses')} className="cursor-pointer rounded-xl border-0 bg-violet-600 px-6 py-3 font-bold text-white transition hover:bg-violet-700">Explore courses</button>
+        <button type="button" onClick={() => navigateTo('/courses')} className="cursor-pointer rounded-xl border-0 bg-[#127C71] px-6 py-3 font-bold text-white transition hover:bg-[#0D6A69]">Explore courses</button>
       </div> : <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_320px]">
         <section>
           <p className="m-0 mb-3 text-sm font-bold">{cartCourses.length} {cartCourses.length === 1 ? 'Course' : 'Courses'} in Cart</p>
@@ -87,8 +87,8 @@ const CourseCartPage: React.FC<Props> = ({ darkMode, onToggleDarkMode }) => {
                 {blockedCourseIds.includes(Number(course.id)) && <p className="m-0 mt-2 text-xs font-semibold text-amber-600">Already enrolled or awaiting payment review</p>}
               </div>
               <div className="flex flex-col items-end justify-between">
-                <span className="text-lg font-extrabold text-violet-700 dark:text-violet-400">${course.price.toFixed(2)}</span>
-                <button type="button" aria-label={`Remove ${course.title} from cart`} onClick={() => removeCourse(Number(course.id))} className="cursor-pointer border-0 bg-transparent text-sm font-semibold text-violet-600 hover:underline">Remove</button>
+                <span className="text-lg font-extrabold text-[#127C71] dark:text-[#9FF1D2]">${course.price.toFixed(2)}</span>
+                <button type="button" aria-label={`Remove ${course.title} from cart`} onClick={() => removeCourse(Number(course.id))} className="cursor-pointer border-0 bg-transparent text-sm font-semibold text-[#127C71] hover:underline">Remove</button>
               </div>
             </li>)}
           </ul>
@@ -97,7 +97,7 @@ const CourseCartPage: React.FC<Props> = ({ darkMode, onToggleDarkMode }) => {
           <p className="m-0 text-sm font-bold text-slate-500">Total:</p>
           <p className="m-0 mt-1 text-4xl font-extrabold tracking-tight">${total.toFixed(2)}</p>
           {blockedCount > 0 && <Alert severity="warning" sx={{ mt: 2 }}>Remove courses you already have or that are awaiting payment verification before checkout.</Alert>}
-          <button type="button" disabled={checkingAccess || blockedCount > 0 || unavailableCount > 0 || !cartCourses.length} onClick={() => setIsCheckoutOpen(true)} className="mt-5 w-full cursor-pointer rounded-xl border-0 bg-violet-600 py-3.5 text-base font-bold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50">Proceed to Checkout →</button>
+          <button type="button" disabled={checkingAccess || blockedCount > 0 || unavailableCount > 0 || !cartCourses.length} onClick={() => setIsCheckoutOpen(true)} className="mt-5 w-full cursor-pointer rounded-xl border-0 bg-[#127C71] py-3.5 text-base font-bold text-white transition hover:bg-[#0D6A69] disabled:cursor-not-allowed disabled:opacity-50">Proceed to Checkout →</button>
           <p className="m-0 mt-3 text-xs text-slate-500">You won't be charged yet</p>
         </aside>
       </div>}

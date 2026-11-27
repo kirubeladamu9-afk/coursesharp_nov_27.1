@@ -24,16 +24,16 @@ const CartDropdown: FC<{ onNavigate?: () => void }> = ({ onNavigate }) => {
 
   return (
     <div className="group relative">
-      <button type="button" aria-label={`Shopping cart, ${ids.length} items`} onClick={go} className="relative flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-[var(--mui-palette-primary-main,#2563eb)] transition hover:bg-slate-500/10">
+      <button type="button" aria-label={`Shopping cart, ${ids.length} items`} onClick={go} className="relative flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-[var(--mui-palette-primary-main,#127C71)] transition hover:bg-slate-500/10">
         <ShoppingCartOutlinedIcon />
-        {ids.length > 0 && <span className="absolute right-0 top-0 flex h-5 min-w-5 items-center justify-center rounded-full bg-violet-600 px-1 text-[11px] font-bold text-white">{ids.length}</span>}
+        {ids.length > 0 && <span className="absolute right-0 top-0 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#127C71] px-1 text-[11px] font-bold text-white">{ids.length}</span>}
       </button>
       <div className="invisible absolute right-0 top-full z-50 w-80 translate-y-2 pt-2 opacity-0 transition duration-200 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-2xl dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
           {ids.length === 0 ? (
             <div className="p-6 text-center">
               <p className="m-0 text-sm text-slate-500">Your cart is empty.</p>
-              <button type="button" onClick={() => { onNavigate?.(); navigateTo('/courses') }} className="mt-3 cursor-pointer border-0 bg-transparent text-sm font-bold text-violet-600">Keep shopping</button>
+              <button type="button" onClick={() => { onNavigate?.(); navigateTo('/courses') }} className="mt-3 cursor-pointer border-0 bg-transparent text-sm font-bold text-[#127C71]">Keep shopping</button>
             </div>
           ) : (
             <>
@@ -51,7 +51,7 @@ const CartDropdown: FC<{ onNavigate?: () => void }> = ({ onNavigate }) => {
               </ul>
               <div className="border-t border-slate-100 p-4 dark:border-slate-800">
                 <p className="m-0 mb-3 text-lg font-extrabold">Total: ${total.toFixed(2)}</p>
-                <button type="button" onClick={go} className="w-full cursor-pointer rounded-xl border-0 bg-violet-600 py-3 text-sm font-bold text-white transition hover:bg-violet-700">Go to cart</button>
+                <button type="button" onClick={go} className="w-full cursor-pointer rounded-xl border-0 bg-[#127C71] py-3 text-sm font-bold text-white transition hover:bg-[#0D6A69]">Go to cart</button>
               </div>
             </>
           )}
