@@ -14,6 +14,7 @@ import { getLatestSubmittedQuizAttempts } from './quiz-performance.js'
 import { areSolverFollowUpsComplete, areSolverProblemsComplete, getStepByStepSolverSessionView, isValidStepByStepSolverConfig, normalizeSolverAnswer } from './step-by-step-solver-engine.js'
 import { expireQuizAnswers, getQuizDeadline, getQuizTimeLimitSeconds, hasScheduledClassQuizzes, isQuizExpired } from './quiz-timing.js'
 import { generateVerificationCode, hashVerificationCode, isValidEmailAddress, sendEnrollmentVerificationEmail, verificationCodeLifetimeMinutes, verificationIpMaxRequests, verificationIpWindowMinutes, verificationMaxIncorrectAttempts, verificationResendCooldownSeconds, verifiedEnrollmentWindowMinutes } from './enrollment-verification.js'
+import { enrollmentOrderVerificationKey, parseEnrollmentOrderItems } from './payment-orders.js'
 
 const databaseUrl = process.env.DATABASE_URL
 
@@ -644,6 +645,45 @@ const initializeDatabase = async () => {
   await ensureNullable('payments', 'course_id')
   await sql`CREATE UNIQUE INDEX IF NOT EXISTS payments_manual_pending_course_idx ON payments(user_id, course_id) WHERE payment_method = 'manual' AND verification_status = 'pending' AND course_id IS NOT NULL`
   await sql`CREATE UNIQUE INDEX IF NOT EXISTS payments_manual_pending_class_idx ON payments(user_id, class_id) WHERE payment_method = 'manual' AND verification_status = 'pending' AND class_id IS NOT NULL`
+  await sql`
+    CREATE TABLE IF NOT EXISTS payment_order_items (
+      id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+      payment_id BIGINT NOT NULL REFERENCES payments(id) ON DELETE CASCADE,
+      course_id BIGINT REFERENCES courses(id) ON DELETE RESTRICT,
+      class_id BIGINT REFERENCES classes(id) ON DELETE RESTRICT,
+      title TEXT NOT NULL,
+      amount NUMERIC(10, 2) NOT NULL CHECK (amount >= 0),
+      removed_at TIMESTAMPTZ,
+      removed_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+      removal_note TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      CHECK ((course_id IS NOT NULL) <> (class_id IS NOT NULL))
+    )
+  `
+  await sql`CREATE UNIQUE INDEX IF NOT EXISTS payment_order_items_course_idx ON payment_order_items (payment_id, course_id) WHERE course_id IS NOT NULL`
+  await sql`CREATE UNIQUE INDEX IF NOT EXISTS payment_order_items_class_idx ON payment_order_items (payment_id, class_id) WHERE class_id IS NOT NULL`
+  await sql`
+    INSERT INTO payment_order_items (payment_id, course_id, class_id, title, amount)
+    SELECT payments.id, payments.course_id, payments.class_id,
+           COALESCE(classes.title, courses.title, 'Course enrollment'), payments.amount
+    FROM payments
+    LEFT JOIN courses ON courses.id = payments.course_id
+    LEFT JOIN classes ON classes.id = payments.class_id
+    WHERE (payments.course_id IS NOT NULL OR payments.class_id IS NOT NULL)
+      AND NOT EXISTS (SELECT 1 FROM payment_order_items WHERE payment_order_items.payment_id = payments.id)
+  `
+  await sql`
+    CREATE TABLE IF NOT EXISTS payment_order_notifications (
+      id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+      payment_id BIGINT NOT NULL REFERENCES payments(id) ON DELETE CASCADE,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      type TEXT NOT NULL CHECK (type IN ('item_removed', 'approved', 'declined')),
+      message TEXT NOT NULL,
+      metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `
+  await sql`CREATE INDEX IF NOT EXISTS payment_order_notifications_user_idx ON payment_order_notifications (user_id, created_at DESC)`
   await sql`
     CREATE TABLE IF NOT EXISTS enrollment_email_verifications (
       id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -2220,36 +2260,39 @@ const updatePaymentStatus = async (reference, status, verification = {}) => sql.
   if (!payment || payment.status === status || payment.status === 'paid') return payment?.status ?? null
   if (payment.paymentMethod === 'manual' && (status !== 'paid' || !verification.manualApproval || payment.verificationStatus !== 'pending')) return payment.status
   if (status === 'paid' && payment.paymentMethod !== 'manual' && !isTestChapa && (Number(verification.amount) !== payment.amount || String(verification.currency).toUpperCase() !== payment.currency.toUpperCase() || verification.merchant_reference !== payment.reference)) return payment.status
+  const orderItems = payment.practiceExamId === null && payment.bookstoreItemId === null ? await getPaymentOrderItems(transaction, payment.id) : []
+  const enrollmentTargets = orderItems.length ? orderItems : payment.courseId !== null || payment.classId !== null ? [{ courseId: payment.courseId, classId: payment.classId, title: 'Course or class' }] : []
   if (status === 'paid' && payment.practiceExamId === null && payment.bookstoreItemId === null) {
-    const issues = await getEnrollmentTargetIssues(transaction, payment.courseId, payment.classId)
-    if (issues.length > 0) {
-      const unavailableReason = payment.courseId !== null ? 'The selected course is no longer available for enrollment.' : 'This class is no longer available for enrollment.'
-      await transaction`
-        UPDATE payments
-        SET status = 'failed', paid_at = NULL,
-            verification_status = CASE WHEN payment_method = 'manual' THEN 'declined' ELSE verification_status END,
-            review_note = CASE WHEN payment_method = 'manual' THEN ${unavailableReason} ELSE review_note END,
-            reviewed_by = CASE WHEN payment_method = 'manual' THEN ${verification.adminUserId ?? null} ELSE reviewed_by END,
-            reviewed_at = CASE WHEN payment_method = 'manual' THEN NOW() ELSE reviewed_at END
-        WHERE id = ${payment.id}
-      `
-      return 'failed'
-    }
-  }
-
-  if (status === 'paid' && payment.practiceExamId === null && payment.bookstoreItemId === null) {
-    const [activeAccess] = await transaction`SELECT 1 FROM enrollments WHERE user_id = ${payment.userId} AND ${targetAccessCondition(payment.courseId, payment.classId)} AND ${enrollmentAccessCondition()} LIMIT 1`
-    if (activeAccess) {
-      await transaction`
-        UPDATE payments
-        SET status = 'failed', paid_at = NULL,
-            verification_status = CASE WHEN payment_method = 'manual' THEN 'declined' ELSE verification_status END,
-            review_note = CASE WHEN payment_method = 'manual' THEN 'You already have active access to this item.' ELSE review_note END,
-            reviewed_by = CASE WHEN payment_method = 'manual' THEN ${verification.adminUserId ?? null} ELSE reviewed_by END,
-            reviewed_at = CASE WHEN payment_method = 'manual' THEN NOW() ELSE reviewed_at END
-        WHERE id = ${payment.id}
-      `
-      return 'failed'
+    if (!enrollmentTargets.length) return payment.status
+    for (const item of enrollmentTargets) {
+      const issues = await getEnrollmentTargetIssues(transaction, item.courseId, item.classId)
+      if (issues.length > 0) {
+        const unavailableReason = `${item.title} is no longer available for enrollment.`
+        await transaction`
+          UPDATE payments
+          SET status = 'failed', paid_at = NULL,
+              verification_status = CASE WHEN payment_method = 'manual' THEN 'declined' ELSE verification_status END,
+              review_note = CASE WHEN payment_method = 'manual' THEN ${unavailableReason} ELSE review_note END,
+              reviewed_by = CASE WHEN payment_method = 'manual' THEN ${verification.adminUserId ?? null} ELSE reviewed_by END,
+              reviewed_at = CASE WHEN payment_method = 'manual' THEN NOW() ELSE reviewed_at END
+          WHERE id = ${payment.id}
+        `
+        return 'failed'
+      }
+      const [activeAccess] = await transaction`SELECT 1 FROM enrollments WHERE user_id = ${payment.userId} AND ${targetAccessCondition(item.courseId, item.classId)} AND ${enrollmentAccessCondition()} LIMIT 1`
+      if (activeAccess) {
+        const alreadyEnrolledReason = `You already have active access to ${item.title}.`
+        await transaction`
+          UPDATE payments
+          SET status = 'failed', paid_at = NULL,
+              verification_status = CASE WHEN payment_method = 'manual' THEN 'declined' ELSE verification_status END,
+              review_note = CASE WHEN payment_method = 'manual' THEN ${alreadyEnrolledReason} ELSE review_note END,
+              reviewed_by = CASE WHEN payment_method = 'manual' THEN ${verification.adminUserId ?? null} ELSE reviewed_by END,
+              reviewed_at = CASE WHEN payment_method = 'manual' THEN NOW() ELSE reviewed_at END
+          WHERE id = ${payment.id}
+        `
+        return 'failed'
+      }
     }
   }
 
@@ -2280,7 +2323,13 @@ const updatePaymentStatus = async (reference, status, verification = {}) => sql.
   }
 
   const students = typeof payment.studentData === 'string' ? JSON.parse(payment.studentData) : payment.studentData
-  await createEnrollments(transaction, { userId: payment.userId, students, courseId: payment.courseId, classId: payment.classId, paymentId: payment.id, source: 'paid' })
+  for (const item of enrollmentTargets) {
+    await createEnrollments(transaction, { userId: payment.userId, students, courseId: item.courseId, classId: item.classId, paymentId: payment.id, source: 'paid' })
+  }
+  if (payment.paymentMethod === 'manual') {
+    await insertPaymentOrderNotification(transaction, { paymentId: payment.id, userId: payment.userId, type: 'approved', message: 'Your payment order was approved. Access is now available for its courses and classes.' })
+    await insertPaymentOrderAudit(transaction, verification.adminRequest, { action: 'payment_order_approved', targetUserId: payment.userId, beforeState: { status: 'pending' }, afterState: { status: 'paid', paymentId: payment.id } })
+  }
   return 'paid'
 })
 
@@ -3735,6 +3784,33 @@ app.get('/api/enrollment/payment-info', async (request, response) => {
   })
 })
 
+app.post('/api/enrollment/order-info', async (request, response) => {
+  const targets = parseEnrollmentOrderItems(request.body?.items)
+  if (!targets) return response.status(400).json({ message: 'Choose between one and ten unique courses or classes.' })
+  const items = []
+  for (const target of targets) {
+    const [item] = target.courseId !== null ? await sql`
+      SELECT id::INTEGER AS id, title, price::FLOAT AS amount
+      FROM courses WHERE id = ${target.courseId} AND status = 'Published'
+    ` : await sql`
+      SELECT id::INTEGER AS id, title, price::FLOAT AS amount, schedule
+      FROM classes WHERE id = ${target.classId} AND published = true AND status IN ('open', 'full')
+    `
+    if (!item) return response.status(404).json({ message: 'One or more selected items are no longer available.' })
+    if (target.classId !== null && isClassEnrollmentClosed(deserializeJson(item.schedule))) return response.status(409).json({ message: `${item.title} is no longer accepting enrollment.` })
+    items.push({ ...target, title: item.title, amount: Number(item.amount) })
+  }
+  const amountCents = items.reduce((total, item) => total + Math.round(item.amount * 100), 0)
+  return response.json({
+    items,
+    amount: amountCents / 100,
+    currency: process.env.MANUAL_PAYMENT_CURRENCY ?? process.env.CHAPA_CURRENCY ?? 'ETB',
+    paymentMethods: manualPaymentMethods,
+    instructions: process.env.MANUAL_PAYMENT_INSTRUCTIONS?.trim() ?? '',
+    configured: true,
+  })
+})
+
 const isCrossSiteRequest = (request) => {
   if (request.get('sec-fetch-site') === 'cross-site') return true
   const origin = request.get('origin')
@@ -3747,6 +3823,31 @@ const isCrossSiteRequest = (request) => {
 }
 
 const enrollmentTargetKey = (courseId, classId) => classId === null ? `course:${courseId}` : `class:${classId}`
+const getEnrollmentVerificationKey = (body) => {
+  if (body?.items === undefined) {
+    const courseId = parseCourseId(String(body?.courseId ?? ''))
+    const classId = parseCourseId(String(body?.classId ?? ''))
+    return (courseId === null) === (classId === null) ? null : enrollmentTargetKey(courseId, classId)
+  }
+  const items = parseEnrollmentOrderItems(body.items)
+  return items ? enrollmentOrderVerificationKey(items) : null
+}
+const getPaymentOrderItems = (queryable, paymentId, includeRemoved = false) => queryable`
+  SELECT id::INTEGER AS id, course_id::INTEGER AS "courseId", class_id::INTEGER AS "classId",
+         title, amount::FLOAT AS amount, removed_at IS NOT NULL AS removed
+  FROM payment_order_items
+  WHERE payment_id = ${paymentId} ${includeRemoved ? queryable`TRUE` : queryable`removed_at IS NULL`}
+  ORDER BY id
+`
+const insertPaymentOrderNotification = (queryable, { paymentId, userId, type, message, metadata = {} }) => queryable`
+  INSERT INTO payment_order_notifications ${queryable({ payment_id: paymentId, user_id: userId, type, message, metadata })}
+`
+const insertPaymentOrderAudit = (queryable, request, { action, targetUserId, beforeState, afterState }) => {
+  const metadata = getClientMetadata(request)
+  return queryable`
+    INSERT INTO admin_audit_log ${queryable({ actor_user_id: request.userId, action, target_user_id: targetUserId, before_state: beforeState, after_state: afterState, client_ip: metadata.ip })}
+  `
+}
 
 class EmailDeliveryFailure extends Error {}
 
@@ -3754,9 +3855,8 @@ app.post('/api/enrollment/verification-code', async (request, response) => {
   if (isCrossSiteRequest(request)) return response.status(403).json({ message: 'Request origin is not allowed.' })
   await loadAuthenticatedUser(request, response)
 
-  const courseId = parseCourseId(String(request.body?.courseId ?? ''))
-  const classId = parseCourseId(String(request.body?.classId ?? ''))
-  if ((courseId === null) === (classId === null)) return response.status(400).json({ message: 'Choose a course or class.' })
+  const targetKey = getEnrollmentVerificationKey(request.body)
+  if (!targetKey) return response.status(400).json({ message: 'Choose a valid course or class order.' })
   const email = typeof request.body?.email === 'string' ? request.body.email.trim().toLowerCase() : ''
   if (!isValidEmailAddress(email)) return response.status(400).json({ message: 'Enter a valid email address.' })
 
@@ -3774,7 +3874,6 @@ app.post('/api/enrollment/verification-code', async (request, response) => {
   const [takenEmail] = await sql`SELECT id FROM users WHERE email = ${email} AND id IS DISTINCT FROM ${request.userId ?? null}`
   if (takenEmail) return response.status(409).json({ message: 'An account with this email already exists. Sign in to continue.' })
 
-  const targetKey = enrollmentTargetKey(courseId, classId)
   const code = generateVerificationCode()
   const codeHash = hashVerificationCode(email, targetKey, code)
   try {
@@ -3818,9 +3917,8 @@ app.post('/api/enrollment/verification-code', async (request, response) => {
 app.post('/api/enrollment/verify-code', async (request, response) => {
   if (isCrossSiteRequest(request)) return response.status(403).json({ message: 'Request origin is not allowed.' })
 
-  const courseId = parseCourseId(String(request.body?.courseId ?? ''))
-  const classId = parseCourseId(String(request.body?.classId ?? ''))
-  if ((courseId === null) === (classId === null)) return response.status(400).json({ message: 'Choose a course or class.' })
+  const targetKey = getEnrollmentVerificationKey(request.body)
+  if (!targetKey) return response.status(400).json({ message: 'Choose a valid course or class order.' })
   const email = typeof request.body?.email === 'string' ? request.body.email.trim().toLowerCase() : ''
   if (!isValidEmailAddress(email)) return response.status(400).json({ message: 'Enter a valid email address.' })
   const code = typeof request.body?.code === 'string' ? request.body.code.trim() : ''
@@ -3964,6 +4062,120 @@ app.post('/api/enrollment/manual-payment', async (request, response) => {
 
   if (result.error) return response.status(result.status).json({ message: result.error })
   return response.status(201).json({ id: result.id, item: result.item, user: result.user, status: 'pending_verification' })
+})
+
+app.post('/api/enrollment/manual-order', async (request, response) => {
+  if (isCrossSiteRequest(request)) return response.status(403).json({ message: 'Request origin is not allowed.' })
+  const authenticated = await loadAuthenticatedUser(request, response)
+  if (authenticated && request.mustResetPassword) return response.status(403).json({ message: 'A password change is required before using this account.' })
+
+  const targets = parseEnrollmentOrderItems(request.body?.items)
+  if (!targets) return response.status(400).json({ message: 'Choose between one and ten unique courses or classes.' })
+  const verificationKey = enrollmentOrderVerificationKey(targets)
+  const proof = parsePaymentProof(request.body?.proofData, request.body?.proofFileName)
+  if (!proof) return response.status(400).json({ message: 'Upload a JPG, PNG, or WebP payment screenshot up to 6 MB.' })
+  const profile = isValidUserProfile(request.body)
+  if (!profile || !profile.phone) return response.status(400).json({ message: 'Enter your name, valid email, and phone number.' })
+  if (!authenticated && !isValidCredentials(profile.email, request.body?.password)) return response.status(400).json({ message: 'Enter a valid email and a password between 8 and 128 characters.' })
+
+  const passwordHash = authenticated ? null : await hashPassword(request.body.password)
+  let result
+  try {
+    result = await sql.begin(async (transaction) => {
+      const [verification] = await transaction`
+        SELECT id FROM enrollment_email_verifications
+        WHERE email = ${profile.email} AND target_key = ${verificationKey} AND verified_until > NOW()
+        FOR UPDATE
+      `
+      if (!verification) return { error: 'Verify your email for this exact order before submitting payment.', status: 403 }
+
+      const [user] = authenticated ? await transaction`
+        UPDATE users
+        SET name = ${profile.name}, email = ${profile.email}, phone = ${profile.phone}
+        WHERE id = ${request.userId} AND status = 'Active'
+        RETURNING id, name, email, phone, role, to_char(created_at, 'FMMonth DD, YYYY') AS "createdAt"
+      ` : await transaction`
+        INSERT INTO users ${transaction({ name: profile.name, email: profile.email, phone: profile.phone, password_hash: passwordHash })}
+        RETURNING id, name, email, phone, role, to_char(created_at, 'FMMonth DD, YYYY') AS "createdAt"
+      `
+      if (!user) return { error: 'Student account not found.', status: 404 }
+
+      await transaction`SELECT pg_advisory_xact_lock(hashtext(${`manual-order-user:${user.id}`}))`
+      const pricedItems = []
+      for (const target of targets) {
+        const [item] = target.courseId !== null ? await transaction`
+          SELECT id, title, price::FLOAT AS amount
+          FROM courses WHERE id = ${target.courseId} AND status = 'Published'
+          FOR SHARE
+        ` : await transaction`
+          SELECT id, title, price::FLOAT AS amount, schedule
+          FROM classes WHERE id = ${target.classId} AND published = true AND status IN ('open', 'full')
+          FOR SHARE
+        `
+        if (!item) return { error: 'One or more selected items are no longer available.', status: 404 }
+        if (target.classId !== null && isClassEnrollmentClosed(deserializeJson(item.schedule))) return { error: `${item.title} is no longer accepting enrollment.`, status: 409 }
+
+        const [activeEnrollment] = await transaction`
+          SELECT enrollments.id FROM enrollments
+          WHERE enrollments.user_id = ${user.id} AND ${targetAccessCondition(target.courseId, target.classId)}
+            AND ${enrollmentAccessCondition()}
+          LIMIT 1
+        `
+        if (activeEnrollment) return { error: `You already have active access to ${item.title}.`, status: 409 }
+
+        const [pendingPayment] = await transaction`
+          SELECT payments.id FROM payments
+          WHERE payments.user_id = ${user.id} AND payments.payment_method = 'manual'
+            AND payments.verification_status = 'pending' AND payments.status = 'pending'
+            AND (
+              (payments.course_id = ${target.courseId} OR payments.class_id = ${target.classId})
+              OR EXISTS (
+                SELECT 1 FROM payment_order_items
+                WHERE payment_order_items.payment_id = payments.id AND payment_order_items.removed_at IS NULL
+                  AND (payment_order_items.course_id = ${target.courseId} OR payment_order_items.class_id = ${target.classId})
+              )
+            )
+          LIMIT 1
+        `
+        if (pendingPayment) return { error: `A payment for ${item.title} is already awaiting verification.`, status: 409 }
+        pricedItems.push({ ...target, title: item.title, amount: Number(item.amount) })
+      }
+
+      const amountCents = pricedItems.reduce((total, item) => total + Math.round(item.amount * 100), 0)
+      const singleTarget = pricedItems.length === 1 ? pricedItems[0] : null
+      const reference = `manual-order-${randomBytes(12).toString('hex')}`
+      const students = [{ fullName: user.name, ageOrGrade: 'Not provided', relationship: 'Self', preferredLanguage: 'Not provided', emergencyPhone: user.phone, notes: '' }]
+      const [payment] = await transaction`
+        INSERT INTO payments ${transaction({
+          reference,
+          user_id: user.id,
+          course_id: singleTarget?.courseId ?? null,
+          class_id: singleTarget?.classId ?? null,
+          student_data: JSON.stringify(students),
+          contact_data: JSON.stringify({ name: user.name, email: user.email, phone: user.phone }),
+          amount: amountCents / 100,
+          currency: process.env.MANUAL_PAYMENT_CURRENCY ?? process.env.CHAPA_CURRENCY ?? 'ETB',
+          payment_method: 'manual',
+          verification_status: 'pending',
+          proof_image: proof.content,
+          proof_mime_type: proof.mimeType,
+          proof_file_name: proof.fileName,
+        })}
+        RETURNING id::INTEGER AS id
+      `
+      for (const item of pricedItems) {
+        await transaction`INSERT INTO payment_order_items ${transaction({ payment_id: payment.id, course_id: item.courseId, class_id: item.classId, title: item.title, amount: item.amount })}`
+      }
+      await transaction`DELETE FROM enrollment_email_verifications WHERE id = ${verification.id}`
+      return { id: payment.id, amount: amountCents / 100, items: pricedItems, user }
+    })
+  } catch (error) {
+    if (error.code === '23505') return response.status(409).json({ message: 'An account or pending payment already exists for one of these items.' })
+    throw error
+  }
+
+  if (result.error) return response.status(result.status).json({ message: result.error })
+  return response.status(201).json({ ...result, status: 'pending_verification' })
 })
 
 app.post('/api/payments/chapa', async (request, response) => {
@@ -4233,13 +4445,16 @@ app.get('/api/bookstore-purchases', requireAuthenticated, async (request, respon
 app.get('/api/payments', requireAuthenticated, async (request, response) => {
   const payments = await sql`
     SELECT payments.id::INTEGER AS id,
-           COALESCE(bookstore_items.title, practice_exams.title, CASE WHEN classes.published = true THEN classes.title END, courses.title, 'Purchase') AS "itemName",
+           COALESCE((SELECT STRING_AGG(order_items.title, ', ' ORDER BY order_items.id) FROM payment_order_items order_items WHERE order_items.payment_id = payments.id AND order_items.removed_at IS NULL), COALESCE(bookstore_items.title, practice_exams.title, CASE WHEN classes.published = true THEN classes.title END, courses.title, 'Purchase')) AS "itemName",
            CASE
              WHEN payments.bookstore_item_id IS NOT NULL THEN 'book'
              WHEN payments.practice_exam_id IS NOT NULL THEN 'practice_exam'
+             WHEN (SELECT COUNT(*) FROM payment_order_items order_items WHERE order_items.payment_id = payments.id AND order_items.removed_at IS NULL) > 1 THEN 'order'
              WHEN payments.class_id IS NOT NULL THEN 'class'
              ELSE 'course'
            END AS type,
+           COALESCE((SELECT jsonb_agg(jsonb_build_object('courseId', order_items.course_id::INTEGER, 'classId', order_items.class_id::INTEGER, 'title', order_items.title, 'amount', order_items.amount::FLOAT) ORDER BY order_items.id) FROM payment_order_items order_items WHERE order_items.payment_id = payments.id AND order_items.removed_at IS NULL), '[]'::jsonb) AS items,
+           COALESCE((SELECT jsonb_agg(jsonb_build_object('type', notifications.type, 'message', notifications.message, 'createdAt', notifications.created_at) ORDER BY notifications.created_at DESC) FROM payment_order_notifications notifications WHERE notifications.payment_id = payments.id AND notifications.user_id = payments.user_id), '[]'::jsonb) AS updates,
            payments.amount::FLOAT AS amount,
            payments.currency,
            CASE
@@ -5145,7 +5360,8 @@ app.get('/api/admin/pending-payments', requireAdmin, async (_request, response) 
            COALESCE(NULLIF(users.name, ''), 'Unknown student') AS student,
            users.email AS email,
            users.phone AS phone,
-           COALESCE(classes.title, courses.title, 'Course enrollment') AS course,
+           COALESCE((SELECT STRING_AGG(order_items.title, ', ' ORDER BY order_items.id) FROM payment_order_items order_items WHERE order_items.payment_id = payments.id AND order_items.removed_at IS NULL), COALESCE(classes.title, courses.title, 'Course enrollment')) AS course,
+           COALESCE((SELECT jsonb_agg(jsonb_build_object('id', order_items.id::INTEGER, 'courseId', order_items.course_id::INTEGER, 'classId', order_items.class_id::INTEGER, 'title', order_items.title, 'amount', order_items.amount::FLOAT) ORDER BY order_items.id) FROM payment_order_items order_items WHERE order_items.payment_id = payments.id AND order_items.removed_at IS NULL), '[]'::jsonb) AS items,
            payments.amount::FLOAT AS amount,
            payments.currency AS currency,
            payments.created_at AS "submittedAt",
@@ -5176,24 +5392,73 @@ app.get('/api/admin/pending-payments/:paymentId/proof', requireAdmin, async (req
 app.post('/api/admin/pending-payments/:paymentId/approve', requireAdmin, async (request, response) => {
   const paymentId = parseEnrollmentId(request.params.paymentId)
   if (paymentId === null) return response.status(400).json({ message: 'Invalid payment.' })
-  const [payment] = await sql`SELECT reference FROM payments WHERE id = ${paymentId} AND payment_method = 'manual' AND verification_status = 'pending' AND status = 'pending'`
+  const [payment] = await sql`SELECT reference, user_id AS "userId", amount::FLOAT AS amount FROM payments WHERE id = ${paymentId} AND payment_method = 'manual' AND verification_status = 'pending' AND status = 'pending'`
   if (!payment) return response.status(409).json({ message: 'This payment is no longer pending verification.' })
-  const status = await updatePaymentStatus(payment.reference, 'paid', { manualApproval: true, adminUserId: request.userId })
+  const status = await updatePaymentStatus(payment.reference, 'paid', { manualApproval: true, adminUserId: request.userId, adminRequest: request })
   if (status !== 'paid') return response.status(409).json({ message: 'This payment could not be approved.' })
   return response.json({ id: paymentId, status: 'approved' })
+})
+
+app.delete('/api/admin/pending-payments/:paymentId/items/:itemId', requireAdmin, async (request, response) => {
+  const paymentId = parseEnrollmentId(request.params.paymentId)
+  const itemId = parseEnrollmentId(request.params.itemId)
+  const reason = typeof request.body?.reason === 'string' ? request.body.reason.trim() : ''
+  if (paymentId === null || itemId === null || reason.length > 500) return response.status(400).json({ message: 'Enter a valid order item and removal reason.' })
+  const metadata = getClientMetadata(request)
+  const result = await sql.begin(async (transaction) => {
+    const [payment] = await transaction`
+      SELECT id, user_id AS "userId", status, verification_status AS "verificationStatus", payment_method AS "paymentMethod", amount::FLOAT AS amount, currency
+      FROM payments WHERE id = ${paymentId} FOR UPDATE
+    `
+    if (!payment || payment.paymentMethod !== 'manual' || payment.status !== 'pending' || payment.verificationStatus !== 'pending') return { error: 'This order is no longer awaiting verification.', status: 409 }
+    const [item] = await transaction`
+      SELECT id, course_id AS "courseId", class_id AS "classId", title, amount::FLOAT AS amount
+      FROM payment_order_items
+      WHERE id = ${itemId} AND payment_id = ${paymentId} AND removed_at IS NULL
+      FOR UPDATE
+    `
+    if (!item) return { error: 'This item is not part of the pending order.', status: 404 }
+    const [{ count }] = await transaction`SELECT COUNT(*)::INTEGER AS count FROM payment_order_items WHERE payment_id = ${paymentId} AND removed_at IS NULL`
+    if (count <= 1) return { error: 'An order must retain at least one item.', status: 409 }
+    await transaction`
+      UPDATE payment_order_items SET removed_at = NOW(), removed_by = ${request.userId}, removal_note = ${reason || null}
+      WHERE id = ${itemId}
+    `
+    const [{ amountCents }] = await transaction`
+      SELECT COALESCE(SUM(ROUND(amount * 100)), 0)::INTEGER AS "amountCents"
+      FROM payment_order_items WHERE payment_id = ${paymentId} AND removed_at IS NULL
+    `
+    const amount = amountCents / 100
+    const message = `${item.title} was removed from your order because it is no longer available. Your new total is ${payment.currency} ${amount.toFixed(2)}.`
+    await transaction`UPDATE payments SET amount = ${amount}, review_note = ${message} WHERE id = ${paymentId}`
+    await insertPaymentOrderNotification(transaction, { paymentId, userId: payment.userId, type: 'item_removed', message, metadata: { itemId, courseId: item.courseId, classId: item.classId, amount, reason } })
+    await transaction`
+      INSERT INTO admin_audit_log ${transaction({ actor_user_id: request.userId, action: 'payment_order_item_removed', target_user_id: payment.userId, before_state: { amount: payment.amount }, after_state: { amount, itemId, title: item.title, reason }, client_ip: metadata.ip })}
+    `
+    return { id: paymentId, amount, items: await getPaymentOrderItems(transaction, paymentId) }
+  })
+  if (result.error) return response.status(result.status).json({ message: result.error })
+  return response.json(result)
 })
 
 app.post('/api/admin/pending-payments/:paymentId/decline', requireAdmin, async (request, response) => {
   const paymentId = parseEnrollmentId(request.params.paymentId)
   const reason = typeof request.body?.reason === 'string' ? request.body.reason.trim() : ''
   if (paymentId === null || reason.length > 500) return response.status(400).json({ message: 'Enter a valid payment and decline reason.' })
-  const [payment] = await sql`
-    UPDATE payments
-    SET status = 'failed', verification_status = 'declined', review_note = ${reason || null}, reviewed_by = ${request.userId}, reviewed_at = NOW()
-    WHERE id = ${paymentId} AND payment_method = 'manual' AND verification_status = 'pending' AND status = 'pending'
-    RETURNING id::INTEGER AS id
-  `
-  if (!payment) return response.status(409).json({ message: 'This payment is no longer pending verification.' })
+  const declined = await sql.begin(async (transaction) => {
+    const [payment] = await transaction`
+      UPDATE payments
+      SET status = 'failed', verification_status = 'declined', review_note = ${reason || null}, reviewed_by = ${request.userId}, reviewed_at = NOW()
+      WHERE id = ${paymentId} AND payment_method = 'manual' AND verification_status = 'pending' AND status = 'pending'
+      RETURNING id::INTEGER AS id, user_id AS "userId"
+    `
+    if (!payment) return null
+    const message = reason ? `Your payment order was declined. ${reason}` : 'Your payment order was declined.'
+    await insertPaymentOrderNotification(transaction, { paymentId, userId: payment.userId, type: 'declined', message })
+    await insertPaymentOrderAudit(transaction, request, { action: 'payment_order_declined', targetUserId: payment.userId, beforeState: { status: 'pending' }, afterState: { status: 'declined', paymentId, reason } })
+    return payment
+  })
+  if (!declined) return response.status(409).json({ message: 'This payment is no longer pending verification.' })
   return response.json({ id: paymentId, status: 'declined' })
 })
 
@@ -5884,10 +6149,11 @@ app.get('/api/admin/payments', requireAdmin, async (_request, response) => {
   const payments = await sql`
     SELECT payments.id::INTEGER AS id,
            COALESCE(NULLIF(users.name, ''), NULLIF(payments.student_data->0->>'fullName', ''), 'Unknown student') AS student,
-           COALESCE(bookstore_items.title, practice_exams.title, classes.title, courses.title, 'Purchase') AS course,
+           COALESCE((SELECT STRING_AGG(order_items.title, ', ' ORDER BY order_items.id) FROM payment_order_items order_items WHERE order_items.payment_id = payments.id AND order_items.removed_at IS NULL), COALESCE(bookstore_items.title, practice_exams.title, classes.title, courses.title, 'Purchase')) AS course,
            CASE
              WHEN payments.bookstore_item_id IS NOT NULL OR payments.reference LIKE 'book-%' OR payments.reference LIKE 'test-book-%' THEN 'Book'
              WHEN payments.practice_exam_id IS NOT NULL THEN 'Practice exam'
+             WHEN (SELECT COUNT(*) FROM payment_order_items order_items WHERE order_items.payment_id = payments.id AND order_items.removed_at IS NULL) > 1 THEN 'Order'
              WHEN payments.class_id IS NOT NULL THEN 'Class'
              ELSE 'Course'
            END AS type,

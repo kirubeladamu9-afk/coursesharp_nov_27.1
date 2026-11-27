@@ -2,9 +2,14 @@ import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import CircularProgress from '@mui/material/CircularProgress'
+import Chip from '@mui/material/Chip'
 import Dialog from '@mui/material/Dialog'
+import DialogActions from '@mui/material/DialogActions'
 import DialogContent from '@mui/material/DialogContent'
 import DialogTitle from '@mui/material/DialogTitle'
+import FormControl from '@mui/material/FormControl'
+import InputLabel from '@mui/material/InputLabel'
+import MenuItem from '@mui/material/MenuItem'
 import IconButton from '@mui/material/IconButton'
 import InputAdornment from '@mui/material/InputAdornment'
 import Stack from '@mui/material/Stack'
@@ -32,10 +37,12 @@ import VerifiedUserOutlinedIcon from '@mui/icons-material/VerifiedUserOutlined'
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined'
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined'
 import { type FC, type FormEvent, type ReactNode, useEffect, useState } from 'react'
+import AddIcon from '@mui/icons-material/Add'
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
 import { type AdminCourse } from '@/components/admin/admin-data'
-import { getAuthenticatedUser, getManualPaymentInfo, saveAuthenticatedUser, sendEnrollmentVerificationCode, submitManualPayment, verifyEnrollmentEmail, type ManualPaymentInfo } from '@/services/api'
+import { getAuthenticatedUser, getCourses, getManualOrderInfo, getPublicClasses, saveAuthenticatedUser, sendEnrollmentOrderVerificationCode, submitManualOrder, verifyEnrollmentOrderEmail, type Course, type EnrollmentOrderTarget, type ManualOrderInfo, type PublicClass } from '@/services/api'
 import { navigateTo } from '@/lib/navigation'
 
 interface EnrollmentModalProps {
@@ -48,6 +55,7 @@ interface EnrollmentModalProps {
 
 const steps = ['Account', 'Verify Email', 'Payment']
 const maximumProofSize = 6 * 1024 * 1024
+type CartItem = { target: EnrollmentOrderTarget; title: string }
 
 const primary = '#127C71'
 const primaryHover = '#0D6A69'
@@ -147,8 +155,14 @@ const EnrollmentModal: FC<EnrollmentModalProps> = ({ course, classId = null, ope
   const [confirmSignupPassword, setConfirmSignupPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [paymentInfo, setPaymentInfo] = useState<ManualPaymentInfo | null>(null)
+  const [paymentInfo, setPaymentInfo] = useState<ManualOrderInfo | null>(null)
   const [paymentInfoError, setPaymentInfoError] = useState<string | null>(null)
+  const [cartItems, setCartItems] = useState<CartItem[]>([])
+  const [catalogOpen, setCatalogOpen] = useState(false)
+  const [catalogTab, setCatalogTab] = useState<'courses' | 'classes'>('courses')
+  const [catalogCourses, setCatalogCourses] = useState<Course[]>([])
+  const [catalogClasses, setCatalogClasses] = useState<PublicClass[]>([])
+  const [catalogError, setCatalogError] = useState<string | null>(null)
   const [proofFile, setProofFile] = useState<File | null>(null)
   const [proofData, setProofData] = useState<string | null>(null)
   const [contact, setContact] = useState({ name: '', email: '', phone: '' })
@@ -175,6 +189,31 @@ const EnrollmentModal: FC<EnrollmentModalProps> = ({ course, classId = null, ope
   }, [resendAvailableAt])
 
   const resendSecondsRemaining = Math.max(0, Math.ceil((resendAvailableAt - Date.now()) / 1000))
+  const orderTargets = cartItems.map((item) => item.target)
+  const selectedTargetKeys = new Set(orderTargets.map((target) => 'courseId' in target ? `course:${target.courseId}` : `class:${target.classId}`))
+  const availableCourses = catalogCourses.filter((item) => !selectedTargetKeys.has(`course:${item.id}`))
+  const availableClasses = catalogClasses.filter((item) => item.published && !item.enrollmentClosed && ['open', 'full'].includes(item.status) && !selectedTargetKeys.has(`class:${item.id}`))
+  const updateCartItems = (items: CartItem[]) => {
+    setCartItems(items)
+    setActiveStep(0)
+    setVerificationCode('')
+    setProofFile(null)
+    setProofData(null)
+    setPaymentError(null)
+    setPaymentInfoError(null)
+  }
+  const addCourseToCart = (item: Course) => {
+    if (cartItems.length >= 10) return
+    updateCartItems([...cartItems, { target: { courseId: Number(item.id) }, title: item.title }])
+  }
+  const addClassToCart = (item: PublicClass) => {
+    if (cartItems.length >= 10) return
+    updateCartItems([...cartItems, { target: { classId: item.id }, title: item.title }])
+  }
+  const removeCartItem = (index: number) => {
+    if (cartItems.length <= 1) return
+    updateCartItems(cartItems.filter((_, itemIndex) => itemIndex !== index))
+  }
 
   useEffect(() => {
     if (!open) return
@@ -199,16 +238,37 @@ const EnrollmentModal: FC<EnrollmentModalProps> = ({ course, classId = null, ope
     setVerificationError(null)
     setVerificationNotice(null)
     setResendAvailableAt(0)
-    getManualPaymentInfo(course.id, classId)
+    const initialTarget: EnrollmentOrderTarget = classId === null ? { courseId: Number(course.id) } : { classId }
+    setCartItems([{ target: initialTarget, title: course.title }])
+    setCatalogOpen(false)
+    return () => { current = false }
+  }, [classId, course.id, course.title, open])
+
+  useEffect(() => {
+    if (!open || cartItems.length === 0) return
+    let current = true
+    setPaymentInfo(null)
+    setPaymentInfoError(null)
+    getManualOrderInfo(cartItems.map((item) => item.target))
       .then((info) => { if (current) setPaymentInfo(info) })
       .catch((error) => { if (current) setPaymentInfoError(error instanceof Error ? error.message : 'Payment instructions are unavailable.') })
     return () => { current = false }
-  }, [classId, course.id, open])
+  }, [cartItems, open])
+
+  useEffect(() => {
+    if (!catalogOpen) return
+    let current = true
+    setCatalogError(null)
+    Promise.all([getCourses(), getPublicClasses()])
+      .then(([courses, classes]) => { if (current) { setCatalogCourses(courses); setCatalogClasses(classes) } })
+      .catch((error) => { if (current) setCatalogError(error instanceof Error ? error.message : 'Unable to load the catalog.') })
+    return () => { current = false }
+  }, [catalogOpen])
 
   const requestVerificationCode = async (email: string) => {
     setIsSendingCode(true)
     try {
-      const { resendAfterSeconds } = await sendEnrollmentVerificationCode(email, course.id, classId)
+      const { resendAfterSeconds } = await sendEnrollmentOrderVerificationCode(email, cartItems.map((item) => item.target))
       setResendAvailableAt(Date.now() + resendAfterSeconds * 1000)
       return null
     } catch (error) {
@@ -266,7 +326,7 @@ const EnrollmentModal: FC<EnrollmentModalProps> = ({ course, classId = null, ope
     setVerificationNotice(null)
     setIsVerifyingCode(true)
     try {
-      await verifyEnrollmentEmail(contact.email, course.id, classId, verificationCode)
+      await verifyEnrollmentOrderEmail(contact.email, cartItems.map((item) => item.target), verificationCode)
       setVerificationCode('')
       setActiveStep(2)
     } catch (error) {
@@ -321,7 +381,7 @@ const EnrollmentModal: FC<EnrollmentModalProps> = ({ course, classId = null, ope
     setPaymentError(null)
     setIsSubmittingPayment(true)
     try {
-      const result = await submitManualPayment(course.id, classId, proofData, proofFile.name, contact, signupPassword)
+      const result = await submitManualOrder(cartItems.map((item) => item.target), proofData, proofFile.name, contact, signupPassword)
       if (isAuthenticated) saveAuthenticatedUser(result.user)
       setSubmitted(true)
       onSubmitted?.()

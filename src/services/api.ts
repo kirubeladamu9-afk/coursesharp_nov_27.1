@@ -658,12 +658,24 @@ export interface ManualPaymentInfo {
   configured: boolean
 }
 
+export type EnrollmentOrderTarget = { courseId: number; classId?: never } | { classId: number; courseId?: never }
+export interface EnrollmentOrderItem {
+  id?: number
+  courseId: number | null
+  classId: number | null
+  title: string
+  amount: number
+  removed?: boolean
+}
+export type PaymentOrderUpdate = { type: 'item_removed' | 'approved' | 'declined'; message: string; createdAt: string }
+
 export interface PendingManualPayment {
   id: number
   student: string
   email: string
   phone: string
   course: string
+  items: EnrollmentOrderItem[]
   amount: number
   currency: string
   submittedAt: string
@@ -691,6 +703,8 @@ export interface MyPayment {
   txRef: string
   courseId: number | null
   classId: number | null
+  items?: EnrollmentOrderItem[]
+  updates?: PaymentOrderUpdate[]
 }
 
 export interface BookstoreItem {
@@ -1044,6 +1058,12 @@ export const getPendingManualPayments = async (): Promise<PendingManualPayment[]
   const response = await requestApi('/api/admin/pending-payments')
   if (!response.ok) throw new Error(await getErrorMessage(response))
   return response.json()
+}
+
+export const removeManualOrderItem = async (paymentId: number, itemId: number, reason = '') => {
+  const response = await requestApi(`/api/admin/pending-payments/${paymentId}/items/${itemId}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) })
+  if (!response.ok) throw new Error(await getErrorMessage(response))
+  return response.json() as Promise<{ id: number; amount: number; items: EnrollmentOrderItem[] }>
 }
 
 export const reviewManualPayment = async (paymentId: number, decision: 'approve' | 'decline', reason = '') => {
@@ -1611,6 +1631,32 @@ export const getManualPaymentInfo = async (courseId: number, classId?: number | 
   return response.json()
 }
 
+export interface ManualOrderInfo {
+  items: EnrollmentOrderItem[]
+  amount: number
+  currency: string
+  paymentMethods: ManualPaymentInfo['paymentMethods']
+  instructions: string
+  configured: boolean
+}
+
+export const getManualOrderInfo = async (items: EnrollmentOrderTarget[]): Promise<ManualOrderInfo> => {
+  const response = await requestApi('/api/enrollment/order-info', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items }) })
+  if (!response.ok) throw new Error(await getErrorMessage(response))
+  return response.json()
+}
+
+export const sendEnrollmentOrderVerificationCode = async (email: string, items: EnrollmentOrderTarget[]): Promise<{ resendAfterSeconds: number }> => {
+  const response = await requestApi('/api/enrollment/verification-code', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, items }) })
+  if (!response.ok) throw new Error(await getErrorMessage(response))
+  return response.json()
+}
+
+export const verifyEnrollmentOrderEmail = async (email: string, items: EnrollmentOrderTarget[], code: string): Promise<void> => {
+  const response = await requestApi('/api/enrollment/verify-code', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, items, code }) })
+  if (!response.ok) throw new Error(await getErrorMessage(response))
+}
+
 export const sendEnrollmentVerificationCode = async (email: string, courseId: number, classId: number | null): Promise<{ resendAfterSeconds: number }> => {
   const response = await requestApi('/api/enrollment/verification-code', {
     method: 'POST',
@@ -1628,6 +1674,12 @@ export const verifyEnrollmentEmail = async (email: string, courseId: number, cla
     body: JSON.stringify({ email, code, ...(classId === null ? { courseId } : { classId }) }),
   })
   if (!response.ok) throw new Error(await getErrorMessage(response))
+}
+
+export const submitManualOrder = async (items: EnrollmentOrderTarget[], proofData: string, proofFileName: string, contact: { name: string; email: string; phone: string }, password: string) => {
+  const response = await requestApi('/api/enrollment/manual-order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items, proofData, proofFileName, ...contact, password }) })
+  if (!response.ok) throw new Error(await getErrorMessage(response))
+  return response.json() as Promise<{ id: number; amount: number; items: EnrollmentOrderItem[]; status: 'pending_verification'; user: AuthUser }>
 }
 
 export const submitManualPayment = async (courseId: number, classId: number | null, proofData: string, proofFileName: string, contact: { name: string; email: string; phone: string }, password: string) => {
