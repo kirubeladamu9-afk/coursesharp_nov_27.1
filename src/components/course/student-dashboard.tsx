@@ -2136,6 +2136,7 @@ type CatalogLab = { id: string; title: string; subject: string; path: string }
 
 const SimulationLabViewer: FC<{ labId?: string }> = ({ labId }) => {
   const [catalog, setCatalog] = useState<CatalogLab[] | null>(null)
+  const [html, setHtml] = useState<string | null>(null)
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
@@ -2152,11 +2153,29 @@ const SimulationLabViewer: FC<{ labId?: string }> = ({ labId }) => {
 
   const lab = catalog?.find((item) => item.id === labId)
   const validPath = lab?.path.split('/').every((segment) => /^[a-z0-9-]+(?:\.html)?$/i.test(segment))
-  const launchPath = lab?.path.replace(/\/sim\.html$/, '/index.html')
-  const source = lab && validPath && launchPath ? `/labs/${encodeURIComponent(lab.subject.toLowerCase())}/${launchPath.split('/').map(encodeURIComponent).join('/')}` : null
+  const source = lab && validPath ? `/labs/${encodeURIComponent(lab.subject.toLowerCase())}/${lab.path.split('/').map(encodeURIComponent).join('/')}` : null
 
-  if (!source) return <Box sx={{ minHeight: 340, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 3 }}><Typography color={failed ? 'error' : 'text.secondary'}>{failed ? 'Simulation labs could not be loaded.' : catalog ? 'This simulation lab is unavailable.' : 'Loading simulation lab...'}</Typography></Box>
-  return <Stack spacing={1.5} sx={{ width: '100%' }}><Button component="a" href={source} variant="outlined" sx={{ alignSelf: 'flex-start' }}>Open full lab page</Button><Box component="iframe" title={lab?.title ?? 'Simulation lab'} src={source} loading="lazy" sx={{ display: 'block', width: '100%', height: { xs: 560, md: 760 }, border: 0, backgroundColor: 'background.paper' }} /></Stack>
+  useEffect(() => {
+    if (!source) return
+    const controller = new AbortController()
+    setHtml(null)
+    setFailed(false)
+    fetch(source, { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error('Unable to load simulation')
+        return response.text()
+      })
+      .then((content) => {
+        const baseHref = new URL('.', new URL(source, window.location.origin)).href
+        setHtml(content.replace(/<head([^>]*)>/i, `<head$1><base href="${baseHref}">`))
+      })
+      .catch(() => { if (!controller.signal.aborted) setFailed(true) })
+    return () => controller.abort()
+  }, [source])
+
+  if (!source || failed) return <Box sx={{ minHeight: 340, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 3 }}><Typography color={failed ? 'error' : 'text.secondary'}>{failed ? 'Simulation lab could not be loaded.' : catalog ? 'This simulation lab is unavailable.' : 'Loading simulation lab...'}</Typography></Box>
+  if (!html) return <Box sx={{ minHeight: 340, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 3 }}><Typography role="status" color="text.secondary">Loading simulation lab...</Typography></Box>
+  return <Box component="iframe" title={lab?.title ?? 'Simulation lab'} srcDoc={html} sandbox="allow-scripts allow-forms allow-pointer-lock allow-modals" allow="fullscreen; pointer-lock" sx={{ display: 'block', width: '100%', height: { xs: 560, md: 760 }, border: 0, backgroundColor: 'background.paper' }} />
 }
 
 const PracticeLessonView: FC<{ questions: NonNullable<DashboardLesson['practiceQuestions']>; onAnswer: (questionId: number, answer: string) => void }> = ({ questions, onAnswer }) => {
